@@ -39,6 +39,7 @@ export interface RegisterAdminData {
     firstName: string;
     lastName: string;
     phoneNumber?: string;
+    gymId?: string;
 }
 
 export interface RegisterSuperAdminData extends RegisterAdminData {
