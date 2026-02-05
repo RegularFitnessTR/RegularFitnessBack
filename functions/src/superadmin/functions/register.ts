@@ -1,8 +1,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { defineString } from "firebase-functions/params";
-import { db, auth } from "../firebase";
-import { AppUser, RegisterSuperAdminData } from "../types";
+import { db, auth, COLLECTIONS } from "../../common";
+import { SuperAdminUser } from "../types/superadmin.model";
+import { RegisterSuperAdminData } from "../types/superadmin.dto";
 
 // Define configuration parameter for Master Key
 const masterKeyParam = defineString("SUPERADMIN_MASTER_KEY", {
@@ -30,7 +31,7 @@ export const registerSuperAdmin = onCall(async (request) => {
     }
 
     try {
-        // 2. Auth Kullanıcısı
+        // 2. Create Firebase Auth user
         const userRecord = await auth.createUser({
             email: data.email,
             password: data.password,
@@ -38,14 +39,14 @@ export const registerSuperAdmin = onCall(async (request) => {
             phoneNumber: data.phoneNumber || undefined,
         });
 
-        // 3. Custom Claim ekle (Superadmin yetkisi için)
+        // 3. Set custom claims for superadmin role
         await auth.setCustomUserClaims(userRecord.uid, {
-            superadmin: true,
-            role: 'superadmin'
+            role: 'superadmin',
+            superadmin: true
         });
 
-        // 4. Firestore Kaydı
-        const newSuperAdmin: AppUser = {
+        // 4. Create Firestore document in superadmins collection
+        const newSuperAdmin: SuperAdminUser = {
             uid: userRecord.uid,
             role: 'superadmin',
             email: data.email,
@@ -56,7 +57,7 @@ export const registerSuperAdmin = onCall(async (request) => {
             createdAt: admin.firestore.Timestamp.now()
         };
 
-        await db.collection('users').doc(userRecord.uid).set(newSuperAdmin);
+        await db.collection(COLLECTIONS.SUPERADMINS).doc(userRecord.uid).set(newSuperAdmin);
 
         return {
             success: true,

@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth } from "../firebase";
-import { AppUser, RegisterAdminData } from "../types";
+import { db, auth, COLLECTIONS } from "../../common";
+import { AdminUser } from "../types/admin.model";
+import { RegisterAdminData } from "../types/admin.dto";
 
 export const createAdmin = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Superadmin mi?
@@ -24,7 +25,7 @@ export const createAdmin = onCall(async (request) => {
     }
 
     try {
-        // 2. Auth Kullanıcısı Oluştur
+        // 2. Create Firebase Auth user
         const userRecord = await auth.createUser({
             email: data.email,
             password: data.password,
@@ -32,14 +33,14 @@ export const createAdmin = onCall(async (request) => {
             phoneNumber: data.phoneNumber || undefined,
         });
 
-        // 3. Custom Claim ekle (Admin yetkisi veriyoruz)
+        // 3. Set custom claims for admin role
         await auth.setCustomUserClaims(userRecord.uid, {
-            admin: true,
-            role: 'admin'
+            role: 'admin',
+            admin: true
         });
 
-        // 4. Firestore Kaydı
-        const newAdmin: AppUser = {
+        // 4. Create Firestore document in admins collection
+        const newAdmin: AdminUser = {
             uid: userRecord.uid,
             role: 'admin',
             email: data.email,
@@ -47,10 +48,11 @@ export const createAdmin = onCall(async (request) => {
             lastName: data.lastName,
             phoneNumber: data.phoneNumber || "",
             photoUrl: "",
-            createdAt: admin.firestore.Timestamp.now()
+            createdAt: admin.firestore.Timestamp.now(),
+            gymIds: data.gymIds || [] // Initialize as empty array or with provided gymIds
         };
 
-        await db.collection('users').doc(userRecord.uid).set(newAdmin);
+        await db.collection(COLLECTIONS.ADMINS).doc(userRecord.uid).set(newAdmin);
 
         return {
             success: true,

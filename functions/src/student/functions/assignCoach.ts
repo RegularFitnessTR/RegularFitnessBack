@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db } from "../firebase";
+import { db, COLLECTIONS } from "../../common";
 
 export const assignCoach = onCall(async (request) => {
     if (!request.auth) {
@@ -19,7 +19,8 @@ export const assignCoach = onCall(async (request) => {
     }
 
     try {
-        const coachDoc = await db.collection('users').doc(coachId).get();
+        // 1. Query from coaches collection
+        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
 
         if (!coachDoc.exists) {
             throw new HttpsError('not-found', 'Belirtilen hoca bulunamadı.');
@@ -30,7 +31,8 @@ export const assignCoach = onCall(async (request) => {
             throw new HttpsError('invalid-argument', 'Okutulan QR kodu bir hocaya ait değil.');
         }
 
-        await db.collection('users').doc(studentId).update({
+        // 2. Update student in students collection
+        await db.collection(COLLECTIONS.STUDENTS).doc(studentId).update({
             coachId: coachId,
             updatedAt: admin.firestore.Timestamp.now()
         });
@@ -43,6 +45,11 @@ export const assignCoach = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Hoca atama hatası:", error);
+
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+
         throw new HttpsError('internal', 'Eşleşme sırasında bir hata oluştu.');
     }
 });

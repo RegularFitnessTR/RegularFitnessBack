@@ -1,0 +1,128 @@
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
+import { db, auth, COLLECTIONS } from "../../common";
+import { UpdateAdminData } from "../types/admin.dto";
+
+export const updateAdmin = onCall(async (request) => {
+    // 1. Yetki Kontrolü: İsteği yapan kişi Superadmin mi?
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
+    }
+
+    // Token içindeki custom claim'i kontrol et
+    if (request.auth.token.role !== 'superadmin' && !request.auth.token.superadmin) {
+        throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok (Sadece Superadmin).');
+    }
+
+    const data = request.data as UpdateAdminData;
+
+    if (!data.adminUid) {
+        throw new HttpsError(
+            'invalid-argument',
+            'Admin UID belirtilmesi zorunludur.'
+        );
+    }
+
+    try {
+        // 2. Query from admins collection
+        const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(data.adminUid).get();
+
+        if (!adminDoc.exists) {
+            throw new HttpsError('not-found', 'Admin kullanıcısı bulunamadı.');
+        }
+
+        const adminData = adminDoc.data();
+
+        // Verify it's actually an admin
+        if (adminData?.role !== 'admin') {
+            throw new HttpsError(
+                'permission-denied',
+                'Bu kullanıcı bir admin değil, dolayısıyla güncellenemez.'
+            );
+        }
+
+        // 3. Firebase Auth güncellemeleri
+        const authUpdates: any = {};
+
+        if (data.email) {
+            authUpdates.email = data.email;
+        }
+
+        if (data.firstName || data.lastName) {
+            const firstName = data.firstName || adminData.firstName;
+            const lastName = data.lastName || adminData.lastName;
+            authUpdates.displayName = `${firstName} ${lastName}`;
+        }
+
+        if (data.phoneNumber !== undefined) {
+            authUpdates.phoneNumber = data.phoneNumber || null;
+        }
+
+        // Auth güncellemesi varsa uygula
+        if (Object.keys(authUpdates).length > 0) {
+            await auth.updateUser(data.adminUid, authUpdates);
+        }
+
+        // 4. Firestore güncellemeleri in admins collection
+        const firestoreUpdates: any = {};
+
+        if (data.firstName) {
+            firestoreUpdates.firstName = data.firstName;
+        }
+
+        if (data.lastName) {
+            firestoreUpdates.lastName = data.lastName;
+        }
+
+        if (data.phoneNumber !== undefined) {
+            firestoreUpdates.phoneNumber = data.phoneNumber;
+        }
+
+        if (data.email) {
+            firestoreUpdates.email = data.email;
+        }
+
+        // GymIds management - three modes:
+        // 1. Replace all gymIds
+        if (data.gymIds !== undefined) {
+            firestoreUpdates.gymIds = data.gymIds;
+        }
+        // 2. Add specific gymIds (using arrayUnion for atomic operation)
+        if (data.addGymIds && data.addGymIds.length > 0) {
+            firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayUnion(...data.addGymIds);
+        }
+        // 3. Remove specific gymIds (using arrayRemove for atomic operation)
+        if (data.removeGymIds && data.removeGymIds.length > 0) {
+            firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayRemove(...data.removeGymIds);
+        }
+
+        firestoreUpdates.updatedAt = admin.firestore.Timestamp.now();
+
+        // Firestore güncellemesi varsa uygula
+        if (Object.keys(firestoreUpdates).length > 0) {
+            await db.collection(COLLECTIONS.ADMINS).doc(data.adminUid).update(firestoreUpdates);
+        }
+
+        return {
+            success: true,
+            message: "Admin başarıyla güncellendi."
+        };
+
+    } catch (error: any) {
+        console.error("Admin güncelleme hatası:", error);
+
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+
+        if (error.code === 'auth/user-not-found') {
+            throw new HttpsError('not-found', 'Admin kullanıcısı bulunamadı.');
+        }
+
+        if (error.code === 'auth/email-already-exists') {
+            throw new HttpsError('already-exists', 'Bu email adresi zaten kullanımda.');
+        }
+
+        throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
+    }
+});

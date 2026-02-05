@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth } from "../firebase";
-import { AppUser, RegisterStudentData } from "../types";
+import { db, auth, COLLECTIONS } from "../../common";
+import { StudentUser } from "../types/student.model";
+import { RegisterStudentData } from "../types/student.dto";
 
 export const registerStudent = onCall(async (request) => {
     const data = request.data as RegisterStudentData;
@@ -14,6 +15,7 @@ export const registerStudent = onCall(async (request) => {
     }
 
     try {
+        // 1. Create Firebase Auth user
         const userRecord = await auth.createUser({
             email: data.email,
             password: data.password,
@@ -21,7 +23,14 @@ export const registerStudent = onCall(async (request) => {
             phoneNumber: data.phoneNumber || undefined,
         });
 
-        const newUser: AppUser = {
+        // 2. Set custom claims for student role
+        await auth.setCustomUserClaims(userRecord.uid, {
+            role: 'student',
+            student: true
+        });
+
+        // 3. Create Firestore document in students collection
+        const newStudent: StudentUser = {
             uid: userRecord.uid,
             role: 'student',
             email: data.email,
@@ -31,10 +40,10 @@ export const registerStudent = onCall(async (request) => {
             photoUrl: "",
             createdAt: admin.firestore.Timestamp.now(),
             remainingSessions: 0,
-            coachId: ""
+            coachId: "" // No coach assigned initially
         };
 
-        await db.collection('users').doc(userRecord.uid).set(newUser);
+        await db.collection(COLLECTIONS.STUDENTS).doc(userRecord.uid).set(newStudent);
 
         return {
             success: true,

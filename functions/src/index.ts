@@ -1,24 +1,33 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 
-// Import modules
-import { registerStudent } from "./student/register";
-import { assignCoach } from "./student/assignCoach";
-import { createCoach } from "./admin/createCoach";
-// import { registerAdmin } from "./admin/register"; // Removed
-
-// Superadmin functions
-import { registerSuperAdmin } from "./superadmin/register";
-import { createAdmin } from "./superadmin/createAdmin";
+// Clean module imports using barrel exports
+import { registerStudent, assignCoach } from "./student";
+import { createCoach, updateCoach, deleteCoach } from "./coach";
+import { createAdmin, updateAdmin, deleteAdmin } from "./admin";
+import { registerSuperAdmin } from "./superadmin";
+import { createGym, updateGym, deleteGym, getGymDetails } from "./gym";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
 
 // Export functions
 export {
+    // Student
     registerStudent,
     assignCoach,
+    // Coach
     createCoach,
-    // registerAdmin, // Removed
+    updateCoach,
+    deleteCoach,
+    // Admin
+    createAdmin,
+    updateAdmin,
+    deleteAdmin,
+    // SuperAdmin
     registerSuperAdmin,
-    createAdmin
+    // Gym
+    createGym,
+    updateGym,
+    deleteGym,
+    getGymDetails
 };
