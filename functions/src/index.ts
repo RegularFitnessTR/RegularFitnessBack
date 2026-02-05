@@ -10,6 +10,7 @@ import { assignSubscription, getStudentSubscription, useSession, getStudentBalan
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
 import { createMeasurement, getMeasurements, getLatestMeasurement } from "./measurement";
 import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
+import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, getStudentSchedule, toggleScheduleStatus } from "./schedule";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -52,5 +53,11 @@ export {
     // ParQ
     createParQTest,
     getParQTests,
-    getLatestParQTest
+    getLatestParQTest,
+    // Schedule
+    assignWorkoutSchedule,
+    updateWorkoutSchedule,
+    deleteWorkoutSchedule,
+    getStudentSchedule,
+    toggleScheduleStatus
 };
