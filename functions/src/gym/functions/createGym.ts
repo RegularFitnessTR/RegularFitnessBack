@@ -39,64 +39,66 @@ export const createGym = onCall(async (request) => {
         throw new HttpsError('invalid-argument', 'Salon türü belirtilmesi zorunludur.');
     }
 
-    // Validate paymentMethod
-    if (!data.paymentMethod || !data.paymentMethod.type) {
-        throw new HttpsError('invalid-argument', 'Ödeme yöntemi belirtilmesi zorunludur.');
-    }
-
-    // Validate based on payment method type
-    if (data.paymentMethod.type === PaymentMethodType.PACKAGE) {
-        if (!data.paymentMethod.packages || data.paymentMethod.packages.length === 0) {
-            throw new HttpsError('invalid-argument', 'En az bir paket tanımlanmalıdır.');
+    // Validate paymentMethod (optional - only validate if provided)
+    if (data.paymentMethod) {
+        if (!data.paymentMethod.type) {
+            throw new HttpsError('invalid-argument', 'Ödeme yöntemi tipi belirtilmesi zorunludur.');
         }
-        // Validate each package
-        for (const pkg of data.paymentMethod.packages) {
-            if (!pkg.name || !pkg.totalSessions || !pkg.totalPrice) {
-                throw new HttpsError(
-                    'invalid-argument',
-                    'Her paketin adı, toplam ders sayısı ve toplam fiyat belirtilmelidir.'
-                );
+
+        // Validate based on payment method type
+        if (data.paymentMethod.type === PaymentMethodType.PACKAGE) {
+            if (!data.paymentMethod.packages || data.paymentMethod.packages.length === 0) {
+                throw new HttpsError('invalid-argument', 'En az bir paket tanımlanmalıdır.');
             }
-            // Calculate pricePerSession if not provided
-            if (!pkg.pricePerSession) {
-                pkg.pricePerSession = pkg.totalPrice / pkg.totalSessions;
+            // Validate each package
+            for (const pkg of data.paymentMethod.packages) {
+                if (!pkg.name || !pkg.totalSessions || !pkg.totalPrice) {
+                    throw new HttpsError(
+                        'invalid-argument',
+                        'Her paketin adı, toplam ders sayısı ve toplam fiyat belirtilmelidir.'
+                    );
+                }
+                // Calculate pricePerSession if not provided
+                if (!pkg.pricePerSession) {
+                    pkg.pricePerSession = pkg.totalPrice / pkg.totalSessions;
+                }
             }
-        }
-    } else if (data.paymentMethod.type === PaymentMethodType.MEMBERSHIP) {
-        if (!data.paymentMethod.monthly || !data.paymentMethod.sixMonths || !data.paymentMethod.yearly) {
-            throw new HttpsError('invalid-argument', 'Tüm üyelik planları tanımlanmalıdır.');
-        }
-        // Validate monthly plan
-        if (!data.paymentMethod.monthly.name || !data.paymentMethod.monthly.monthlyPrice) {
-            throw new HttpsError('invalid-argument', 'Aylık üyelik bilgileri eksik.');
-        }
-        if (!data.paymentMethod.monthly.durationMonths) {
-            data.paymentMethod.monthly.durationMonths = 1;
-        }
-        if (!data.paymentMethod.monthly.totalPrice) {
-            data.paymentMethod.monthly.totalPrice = data.paymentMethod.monthly.monthlyPrice * data.paymentMethod.monthly.durationMonths;
-        }
+        } else if (data.paymentMethod.type === PaymentMethodType.MEMBERSHIP) {
+            if (!data.paymentMethod.monthly || !data.paymentMethod.sixMonths || !data.paymentMethod.yearly) {
+                throw new HttpsError('invalid-argument', 'Tüm üyelik planları tanımlanmalıdır.');
+            }
+            // Validate monthly plan
+            if (!data.paymentMethod.monthly.name || !data.paymentMethod.monthly.monthlyPrice) {
+                throw new HttpsError('invalid-argument', 'Aylık üyelik bilgileri eksik.');
+            }
+            if (!data.paymentMethod.monthly.durationMonths) {
+                data.paymentMethod.monthly.durationMonths = 1;
+            }
+            if (!data.paymentMethod.monthly.totalPrice) {
+                data.paymentMethod.monthly.totalPrice = data.paymentMethod.monthly.monthlyPrice * data.paymentMethod.monthly.durationMonths;
+            }
 
-        // Validate 6-month plan
-        if (!data.paymentMethod.sixMonths.name || !data.paymentMethod.sixMonths.monthlyPrice) {
-            throw new HttpsError('invalid-argument', '6 aylık üyelik bilgileri eksik.');
-        }
-        if (!data.paymentMethod.sixMonths.durationMonths) {
-            data.paymentMethod.sixMonths.durationMonths = 6;
-        }
-        if (!data.paymentMethod.sixMonths.totalPrice) {
-            data.paymentMethod.sixMonths.totalPrice = data.paymentMethod.sixMonths.monthlyPrice * data.paymentMethod.sixMonths.durationMonths;
-        }
+            // Validate 6-month plan
+            if (!data.paymentMethod.sixMonths.name || !data.paymentMethod.sixMonths.monthlyPrice) {
+                throw new HttpsError('invalid-argument', '6 aylık üyelik bilgileri eksik.');
+            }
+            if (!data.paymentMethod.sixMonths.durationMonths) {
+                data.paymentMethod.sixMonths.durationMonths = 6;
+            }
+            if (!data.paymentMethod.sixMonths.totalPrice) {
+                data.paymentMethod.sixMonths.totalPrice = data.paymentMethod.sixMonths.monthlyPrice * data.paymentMethod.sixMonths.durationMonths;
+            }
 
-        // Validate yearly plan
-        if (!data.paymentMethod.yearly.name || !data.paymentMethod.yearly.monthlyPrice) {
-            throw new HttpsError('invalid-argument', 'Yıllık üyelik bilgileri eksik.');
-        }
-        if (!data.paymentMethod.yearly.durationMonths) {
-            data.paymentMethod.yearly.durationMonths = 12;
-        }
-        if (!data.paymentMethod.yearly.totalPrice) {
-            data.paymentMethod.yearly.totalPrice = data.paymentMethod.yearly.monthlyPrice * data.paymentMethod.yearly.durationMonths;
+            // Validate yearly plan
+            if (!data.paymentMethod.yearly.name || !data.paymentMethod.yearly.monthlyPrice) {
+                throw new HttpsError('invalid-argument', 'Yıllık üyelik bilgileri eksik.');
+            }
+            if (!data.paymentMethod.yearly.durationMonths) {
+                data.paymentMethod.yearly.durationMonths = 12;
+            }
+            if (!data.paymentMethod.yearly.totalPrice) {
+                data.paymentMethod.yearly.totalPrice = data.paymentMethod.yearly.monthlyPrice * data.paymentMethod.yearly.durationMonths;
+            }
         }
     }
 
@@ -110,13 +112,17 @@ export const createGym = onCall(async (request) => {
             name: data.name,
             ownerId: request.auth.uid,
             gymType: data.gymType,
-            paymentMethod: data.paymentMethod,
             amenities: data.amenities,
             address: data.address,
             phoneNumber: data.phoneNumber,
             socialMedia: data.socialMedia || [],
             createdAt: admin.firestore.Timestamp.now()
         };
+
+        // Add paymentMethod only if provided
+        if (data.paymentMethod) {
+            newGym.paymentMethod = data.paymentMethod;
+        }
 
         await gymRef.set(newGym);
 

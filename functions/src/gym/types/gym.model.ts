@@ -27,7 +27,7 @@ export interface Gym {
     name: string;
     ownerId: string; // Admin UID who created this gym
     gymType: GymType;              // Type of gym (fitness, swimming, etc.)
-    paymentMethod: PaymentMethod;  // Package-based or membership-based
+    paymentMethod?: PaymentMethod;  // Package-based or membership-based (optional - can be added later)
     amenities: GymAmenity[];
     address: GymAddress;
     phoneNumber: string;
