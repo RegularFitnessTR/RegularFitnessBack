@@ -1,0 +1,125 @@
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
+import { db, COLLECTIONS } from "../../common";
+import { PackagePaymentRequest, MembershipPaymentRequest } from "../types/payment.model";
+import { PaymentStatus } from "../types/payment.enums";
+import { CreatePackagePaymentData, CreateMembershipPaymentData } from "../types/payment.dto";
+import { PaymentMethodType } from "../../gym/types/gym.enums";
+import { PackageSubscription, MembershipSubscription } from "../../subscription/types/subscription.model";
+
+export const createPaymentRequest = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
+    }
+
+    const { role } = request.auth.token;
+    if (role !== 'student') {
+        throw new HttpsError('permission-denied', 'Bu işlem sadece öğrenciler tarafından yapılabilir.');
+    }
+
+    const studentId = request.auth.uid;
+    const data = request.data as CreatePackagePaymentData | CreateMembershipPaymentData;
+
+    try {
+        const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(studentId).get();
+        const studentData = studentDoc.data();
+        const subscriptionId = studentData?.activeSubscriptionId;
+
+        if (!subscriptionId) {
+            throw new HttpsError('failed-precondition', 'Aktif aboneliğiniz bulunmuyor.');
+        }
+
+        const subscriptionDoc = await db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(subscriptionId).get();
+
+        if (!subscriptionDoc.exists) {
+            throw new HttpsError('not-found', 'Abonelik kaydı bulunamadı.');
+        }
+
+        const subscription = subscriptionDoc.data();
+        const gymId = subscription?.gymId;
+
+        const paymentRef = db.collection(COLLECTIONS.PAYMENT_REQUESTS).doc();
+        const paymentId = paymentRef.id;
+
+        let newPaymentRequest: PackagePaymentRequest | MembershipPaymentRequest;
+
+        if (subscription?.type === PaymentMethodType.PACKAGE) {
+            // Package-based payment
+            if (!('sessionCount' in data)) {
+                throw new HttpsError('invalid-argument', 'Ders sayısı belirtilmesi zorunludur.');
+            }
+
+            const sessionCount = data.sessionCount;
+            if (sessionCount < 1) {
+                throw new HttpsError('invalid-argument', 'En az 1 ders için ödeme yapmalısınız.');
+            }
+
+            const packageSub = subscription as PackageSubscription;
+            const totalAmount = sessionCount * packageSub.pricePerSession;
+
+            newPaymentRequest = {
+                id: paymentId,
+                studentId: studentId,
+                subscriptionId: subscriptionId,
+                gymId: gymId,
+                type: PaymentMethodType.PACKAGE,
+                sessionCount: sessionCount,
+                pricePerSession: packageSub.pricePerSession,
+                totalAmount: totalAmount,
+                status: PaymentStatus.PENDING,
+                createdAt: admin.firestore.Timestamp.now()
+            };
+
+        } else {
+            // Membership-based payment
+            if (!('monthNumber' in data)) {
+                throw new HttpsError('invalid-argument', 'Ay numarası belirtilmesi zorunludur.');
+            }
+
+            const monthNumber = data.monthNumber;
+            const membershipSub = subscription as MembershipSubscription;
+
+            if (monthNumber < 1 || monthNumber > membershipSub.totalMonths) {
+                throw new HttpsError('invalid-argument', `Geçersiz ay numarası. 1-${membershipSub.totalMonths} arası olmalıdır.`);
+            }
+
+            const monthlyPayment = membershipSub.monthlyPayments[monthNumber - 1];
+
+            if (monthlyPayment.status === 'paid') {
+                throw new HttpsError('already-exists', 'Bu ay için ödeme zaten yapılmış.');
+            }
+
+            newPaymentRequest = {
+                id: paymentId,
+                studentId: studentId,
+                subscriptionId: subscriptionId,
+                gymId: gymId,
+                type: PaymentMethodType.MEMBERSHIP,
+                monthNumber: monthNumber,
+                monthlyAmount: membershipSub.monthlyPayment,
+                status: PaymentStatus.PENDING,
+                createdAt: admin.firestore.Timestamp.now()
+            };
+        }
+
+        await paymentRef.set(newPaymentRequest);
+
+        return {
+            success: true,
+            message: "Ödeme talebiniz oluşturuldu. Hoca veya admin onayı bekleniyor.",
+            paymentRequestId: paymentId,
+            totalAmount: subscription?.type === PaymentMethodType.PACKAGE
+                ? (newPaymentRequest as PackagePaymentRequest).totalAmount
+                : (newPaymentRequest as MembershipPaymentRequest).monthlyAmount
+        };
+
+    } catch (error: any) {
+        console.error("Ödeme talebi oluşturma hatası:", error);
+
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+
+        throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
+    }
+});

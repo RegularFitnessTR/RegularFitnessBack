@@ -11,6 +11,5 @@ export interface StudentUser extends BaseUser {
     height?: number; // cm
     weight?: number; // kg
     medicalConditions?: string;
-    activeSubscriptionId?: string;
-    remainingSessions: number;
+    activeSubscriptionId?: string; // Link to active subscription
 }

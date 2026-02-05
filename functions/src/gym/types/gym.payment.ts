@@ -4,17 +4,20 @@ import { PaymentMethodType } from './gym.enums';
  * Package definition for package-based payment
  */
 export interface Package {
-    name: string;           // "Standart Paket"
-    sessionCount: number;   // 8 ders
-    basePrice: number;      // 24000 TL
+    name: string;
+    totalSessions: number;      // Total sessions in package (e.g., 12)
+    totalPrice: number;          // Total package price (e.g., 24000)
+    pricePerSession: number;    // Price per session (e.g., 2000) - calculated: totalPrice / totalSessions
 }
 
 /**
- * Membership plan (monthly, 6-months, yearly)
+ * Membership plan with monthly pricing
  */
 export interface MembershipPlan {
     name: string;
-    price: number;
+    monthlyPrice: number;       // Monthly payment amount (e.g., 2500)
+    durationMonths: number;     // Duration in months (1, 6, or 12)
+    totalPrice: number;         // Total price - calculated: monthlyPrice × durationMonths
 }
 
 /**
@@ -22,7 +25,7 @@ export interface MembershipPlan {
  */
 export interface PackagePaymentMethod {
     type: PaymentMethodType.PACKAGE;
-    packages: Package[];  // Admin can define multiple packages
+    packages: Package[];
 }
 
 /**
@@ -37,6 +40,5 @@ export interface MembershipPaymentMethod {
 
 /**
  * Discriminated union for payment methods
- * TypeScript can discriminate based on 'type' field
  */
 export type PaymentMethod = PackagePaymentMethod | MembershipPaymentMethod;

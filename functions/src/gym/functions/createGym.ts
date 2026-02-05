@@ -51,26 +51,52 @@ export const createGym = onCall(async (request) => {
         }
         // Validate each package
         for (const pkg of data.paymentMethod.packages) {
-            if (!pkg.name || !pkg.sessionCount || !pkg.basePrice) {
+            if (!pkg.name || !pkg.totalSessions || !pkg.totalPrice) {
                 throw new HttpsError(
                     'invalid-argument',
-                    'Her paketin adı, ders sayısı ve fiyatı belirtilmelidir.'
+                    'Her paketin adı, toplam ders sayısı ve toplam fiyat belirtilmelidir.'
                 );
+            }
+            // Calculate pricePerSession if not provided
+            if (!pkg.pricePerSession) {
+                pkg.pricePerSession = pkg.totalPrice / pkg.totalSessions;
             }
         }
     } else if (data.paymentMethod.type === PaymentMethodType.MEMBERSHIP) {
         if (!data.paymentMethod.monthly || !data.paymentMethod.sixMonths || !data.paymentMethod.yearly) {
             throw new HttpsError('invalid-argument', 'Tüm üyelik planları tanımlanmalıdır.');
         }
-        // Validate each membership plan
-        if (!data.paymentMethod.monthly.name || !data.paymentMethod.monthly.price) {
+        // Validate monthly plan
+        if (!data.paymentMethod.monthly.name || !data.paymentMethod.monthly.monthlyPrice) {
             throw new HttpsError('invalid-argument', 'Aylık üyelik bilgileri eksik.');
         }
-        if (!data.paymentMethod.sixMonths.name || !data.paymentMethod.sixMonths.price) {
+        if (!data.paymentMethod.monthly.durationMonths) {
+            data.paymentMethod.monthly.durationMonths = 1;
+        }
+        if (!data.paymentMethod.monthly.totalPrice) {
+            data.paymentMethod.monthly.totalPrice = data.paymentMethod.monthly.monthlyPrice * data.paymentMethod.monthly.durationMonths;
+        }
+
+        // Validate 6-month plan
+        if (!data.paymentMethod.sixMonths.name || !data.paymentMethod.sixMonths.monthlyPrice) {
             throw new HttpsError('invalid-argument', '6 aylık üyelik bilgileri eksik.');
         }
-        if (!data.paymentMethod.yearly.name || !data.paymentMethod.yearly.price) {
+        if (!data.paymentMethod.sixMonths.durationMonths) {
+            data.paymentMethod.sixMonths.durationMonths = 6;
+        }
+        if (!data.paymentMethod.sixMonths.totalPrice) {
+            data.paymentMethod.sixMonths.totalPrice = data.paymentMethod.sixMonths.monthlyPrice * data.paymentMethod.sixMonths.durationMonths;
+        }
+
+        // Validate yearly plan
+        if (!data.paymentMethod.yearly.name || !data.paymentMethod.yearly.monthlyPrice) {
             throw new HttpsError('invalid-argument', 'Yıllık üyelik bilgileri eksik.');
+        }
+        if (!data.paymentMethod.yearly.durationMonths) {
+            data.paymentMethod.yearly.durationMonths = 12;
+        }
+        if (!data.paymentMethod.yearly.totalPrice) {
+            data.paymentMethod.yearly.totalPrice = data.paymentMethod.yearly.monthlyPrice * data.paymentMethod.yearly.durationMonths;
         }
     }
 

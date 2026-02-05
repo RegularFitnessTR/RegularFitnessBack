@@ -6,6 +6,8 @@ import { createCoach, updateCoach, deleteCoach } from "./coach";
 import { createAdmin, updateAdmin, deleteAdmin } from "./admin";
 import { registerSuperAdmin } from "./superadmin";
 import { createGym, updateGym, deleteGym, getGymDetails } from "./gym";
+import { assignSubscription, getStudentSubscription, useSession, getStudentBalance } from "./subscription";
+import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -29,5 +31,15 @@ export {
     createGym,
     updateGym,
     deleteGym,
-    getGymDetails
+    getGymDetails,
+    // Subscription
+    assignSubscription,
+    getStudentSubscription,
+    useSession,
+    getStudentBalance,
+    // Payment
+    createPaymentRequest,
+    approvePayment,
+    rejectPayment,
+    getPaymentRequests
 };

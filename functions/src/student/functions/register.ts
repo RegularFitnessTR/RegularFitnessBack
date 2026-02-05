@@ -39,7 +39,6 @@ export const registerStudent = onCall(async (request) => {
             phoneNumber: data.phoneNumber,
             photoUrl: "",
             createdAt: admin.firestore.Timestamp.now(),
-            remainingSessions: 0,
             coachId: "" // No coach assigned initially
         };
 
