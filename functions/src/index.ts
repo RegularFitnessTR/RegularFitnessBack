@@ -2,12 +2,14 @@ import { setGlobalOptions } from "firebase-functions/v2";
 
 // Clean module imports using barrel exports
 import { registerStudent, assignCoach } from "./student";
-import { createCoach, updateCoach, deleteCoach } from "./coach";
+import { createCoach, updateCoach, deleteCoach, updateCoachProfile } from "./coach";
 import { createAdmin, updateAdmin, deleteAdmin } from "./admin";
 import { registerSuperAdmin } from "./superadmin";
 import { createGym, updateGym, deleteGym, getGymDetails } from "./gym";
 import { assignSubscription, getStudentSubscription, useSession, getStudentBalance } from "./subscription";
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
+import { createMeasurement, getMeasurements, getLatestMeasurement } from "./measurement";
+import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -21,6 +23,7 @@ export {
     createCoach,
     updateCoach,
     deleteCoach,
+    updateCoachProfile,
     // Admin
     createAdmin,
     updateAdmin,
@@ -41,5 +44,13 @@ export {
     createPaymentRequest,
     approvePayment,
     rejectPayment,
-    getPaymentRequests
+    getPaymentRequests,
+    // Measurement
+    createMeasurement,
+    getMeasurements,
+    getLatestMeasurement,
+    // ParQ
+    createParQTest,
+    getParQTests,
+    getLatestParQTest
 };

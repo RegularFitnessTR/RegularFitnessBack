@@ -8,5 +8,7 @@ export const COLLECTIONS = {
     SUPERADMINS: 'superadmins',
     GYMS: 'gyms',
     SUBSCRIPTIONS: 'subscriptions',
-    PAYMENT_REQUESTS: 'paymentRequests'
+    PAYMENT_REQUESTS: 'paymentRequests',
+    MEASUREMENTS: 'measurements',
+    PARQ_TESTS: 'parqTests'
 } as const;

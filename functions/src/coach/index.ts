@@ -6,3 +6,4 @@ export * from './types/coach.dto';
 export * from './functions/createCoach';
 export * from './functions/updateCoach';
 export * from './functions/deleteCoach';
+export * from './functions/updateCoachProfile';
