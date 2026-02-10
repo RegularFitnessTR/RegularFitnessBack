@@ -11,6 +11,7 @@ import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests
 import { createMeasurement, getMeasurements, getLatestMeasurement } from "./measurement";
 import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
 import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, getStudentSchedule, toggleScheduleStatus } from "./schedule";
+import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes } from "./applicationFeatures";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -59,5 +60,12 @@ export {
     updateWorkoutSchedule,
     deleteWorkoutSchedule,
     getStudentSchedule,
-    toggleScheduleStatus
+    toggleScheduleStatus,
+    // Application Features
+    createGymTypes,
+    createAmenities,
+    createSocialMediaTypes,
+    deleteAmenities,
+    deleteGymTypes,
+    deleteSocialMediaTypes
 };
