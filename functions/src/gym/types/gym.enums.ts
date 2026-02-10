@@ -1,33 +1,17 @@
 /**
  * Available amenities/facilities for gyms
  */
-export enum GymAmenity {
-    PARKING = 'parking',
-    SHOWERS = 'showers',
-    LOCKERS = 'lockers',
-    SAUNA = 'sauna',
-    POOL = 'pool',
-    CARDIO_EQUIPMENT = 'cardio_equipment',
-    FREE_WEIGHTS = 'free_weights',
-    PERSONAL_TRAINING = 'personal_training',
-    GROUP_CLASSES = 'group_classes',
-    CAFE = 'cafe',
-    WIFI = 'wifi',
-    AIR_CONDITIONING = 'air_conditioning'
-}
+/**
+ * Available amenities/facilities for gyms
+ * Now dynamic strings managed by admins
+ */
+export type GymAmenity = string;
 
 /**
  * Gym types
+ * Now dynamic strings managed by admins
  */
-export enum GymType {
-    FITNESS = 'fitness',
-    SWIMMING = 'swimming',
-    BOXING = 'boxing',
-    REFORMER = 'reformer',
-    CROSSFIT = 'crossfit',
-    YOGA = 'yoga',
-    OTHER = 'other'
-}
+export type GymType = string;
 
 /**
  * Payment method types
@@ -39,11 +23,7 @@ export enum PaymentMethodType {
 
 /**
  * Social media platform types
+ * Now dynamic strings managed by admins
  */
-export enum SocialMediaPlatform {
-    INSTAGRAM = 'instagram',
-    FACEBOOK = 'facebook',
-    TWITTER = 'twitter',
-    YOUTUBE = 'youtube',
-    TIKTOK = 'tiktok'
-}
+export type SocialMediaPlatform = string;
+

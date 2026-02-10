@@ -11,5 +11,6 @@ export const COLLECTIONS = {
     PAYMENT_REQUESTS: 'paymentRequests',
     MEASUREMENTS: 'measurements',
     PARQ_TESTS: 'parqTests',
-    WORKOUT_SCHEDULES: 'workoutSchedules'
+    WORKOUT_SCHEDULES: 'workoutSchedules',
+    APPLICATION_FEATURES: 'applicationFeatures'
 } as const;

@@ -1,4 +1,4 @@
-import { GymAmenity, GymType } from './gym.enums';
+import { GymType } from './gym.enums';
 import { GymAddress, SocialMediaLinks } from './gym.model';
 import { PaymentMethod } from './gym.payment';
 
@@ -9,7 +9,7 @@ export interface CreateGymData {
     name: string;
     gymType: GymType;              // Required
     paymentMethod?: PaymentMethod;  // Optional - can be added later
-    amenities: GymAmenity[];
+    amenities: string[];
     address: GymAddress;
     phoneNumber: string;
     socialMedia?: SocialMediaLinks[];
@@ -23,7 +23,7 @@ export interface UpdateGymData {
     name?: string;
     gymType?: GymType;             // Optional for updates
     paymentMethod?: PaymentMethod; // Optional for updates
-    amenities?: GymAmenity[];
+    amenities?: string[];
     address?: Partial<GymAddress>; // Allow partial address updates
     phoneNumber?: string;
     socialMedia?: SocialMediaLinks[];
