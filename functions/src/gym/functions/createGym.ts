@@ -110,6 +110,7 @@ export const createGym = onCall(async (request) => {
         const newGym: Gym = {
             id: gymId,
             name: data.name,
+            photoUrl: data.photoUrl,
             ownerId: request.auth.uid,
             gymType: data.gymType,
             amenities: data.amenities,

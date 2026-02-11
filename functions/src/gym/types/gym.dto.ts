@@ -7,6 +7,7 @@ import { PaymentMethod } from './gym.payment';
  */
 export interface CreateGymData {
     name: string;
+    photoUrl?: string;
     gymType: GymType;              // Required
     paymentMethod?: PaymentMethod;  // Optional - can be added later
     amenities: string[];
@@ -21,6 +22,7 @@ export interface CreateGymData {
 export interface UpdateGymData {
     gymId: string;
     name?: string;
+    photoUrl?: string;
     gymType?: GymType;             // Optional for updates
     paymentMethod?: PaymentMethod; // Optional for updates
     amenities?: string[];
