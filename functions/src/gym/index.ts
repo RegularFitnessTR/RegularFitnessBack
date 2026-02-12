@@ -12,3 +12,5 @@ export * from './functions/getGymDetails';
 export * from './functions/addPackage';
 export * from './functions/updatePackage';
 export * from './functions/updateMembership';
+export * from './functions/addAmenity';
+export * from './functions/deleteAmenity';

@@ -30,3 +30,13 @@ export interface UpdateGymData {
     phoneNumber?: string;
     socialMedia?: SocialMediaLinks[];
 }
+
+export interface AddAmenityData {
+    gymId: string;
+    amenity: string;
+}
+
+export interface RemoveAmenityData {
+    gymId: string;
+    amenity: string;
+}
