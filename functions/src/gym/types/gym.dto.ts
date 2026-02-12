@@ -33,10 +33,10 @@ export interface UpdateGymData {
 
 export interface AddAmenityData {
     gymId: string;
-    amenity: string;
+    amenities: string[];
 }
 
 export interface RemoveAmenityData {
     gymId: string;
-    amenity: string;
+    amenities: string[];
 }

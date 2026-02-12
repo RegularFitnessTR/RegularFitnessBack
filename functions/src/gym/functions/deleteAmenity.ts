@@ -15,8 +15,8 @@ export const deleteAmenity = onCall(async (request) => {
 
     const data = request.data as RemoveAmenityData;
 
-    if (!data.gymId || !data.amenity) {
-        throw new HttpsError('invalid-argument', 'Salon ID ve imkan bilgisi zorunludur.');
+    if (!data.gymId || !data.amenities || data.amenities.length === 0) {
+        throw new HttpsError('invalid-argument', 'Salon ID ve en az bir imkan bilgisi zorunludur.');
     }
 
     try {
@@ -34,14 +34,14 @@ export const deleteAmenity = onCall(async (request) => {
         }
 
         await gymRef.update({
-            amenities: admin.firestore.FieldValue.arrayRemove(data.amenity),
+            amenities: admin.firestore.FieldValue.arrayRemove(...data.amenities),
             updatedAt: admin.firestore.Timestamp.now()
         });
 
         return {
             success: true,
             message: "İmkan başarıyla silindi.",
-            data: data.amenity
+            data: data.amenities
         };
 
     } catch (error: any) {
