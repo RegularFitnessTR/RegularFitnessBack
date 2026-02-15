@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
+import { logError } from "../../log/utils/logError";
 
 export const getMeasurements = onCall(async (request) => {
     if (!request.auth) {
@@ -51,6 +52,14 @@ export const getMeasurements = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Ölçümleri getirme hatası:", error);
+
+        await logError({
+            functionName: 'getMeasurements',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { studentId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

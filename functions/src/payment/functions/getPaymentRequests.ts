@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
+import { logError } from "../../log/utils/logError";
 
 export const getPaymentRequests = onCall(async (request) => {
     // 1. Yetki Kontrolü: Coach veya Admin
@@ -53,6 +54,14 @@ export const getPaymentRequests = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Ödeme talepleri getirme hatası:", error);
+
+        await logError({
+            functionName: 'getPaymentRequests',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { status, gymId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

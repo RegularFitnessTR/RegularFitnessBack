@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
+import { logError } from "../../log/utils/logError";
 
 export const getGymDetails = onCall(async (request) => {
     // 1. Verify user is authenticated
@@ -33,6 +34,14 @@ export const getGymDetails = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Gym detay hatası:", error);
+
+        await logError({
+            functionName: 'getGymDetails',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { gymId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

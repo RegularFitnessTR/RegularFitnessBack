@@ -75,6 +75,11 @@ export const deleteAmenities = onCall(async (request) => {
             requestData: data
         });
 
+
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });

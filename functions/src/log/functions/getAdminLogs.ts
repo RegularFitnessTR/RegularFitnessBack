@@ -1,7 +1,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { GetLogsData } from "../types/log.dto";
 import { ActivityLog } from "../types/log.model";
+import { logError } from "../utils/logError";
 
 export const getAdminLogs = onCall(async (request) => {
     // 1. Auth kontrolü
@@ -60,12 +62,12 @@ export const getAdminLogs = onCall(async (request) => {
 
         // Tarih aralığı filtresi
         if (data.startDate) {
-            const startTimestamp = new Date(data.startDate);
+            const startTimestamp = admin.firestore.Timestamp.fromDate(new Date(data.startDate));
             query = query.where('timestamp', '>=', startTimestamp);
         }
 
         if (data.endDate) {
-            const endTimestamp = new Date(data.endDate);
+            const endTimestamp = admin.firestore.Timestamp.fromDate(new Date(data.endDate));
             query = query.where('timestamp', '<=', endTimestamp);
         }
 
@@ -93,6 +95,14 @@ export const getAdminLogs = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Admin log sorgulama hatası:", error);
+
+        await logError({
+            functionName: 'getAdminLogs',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;
