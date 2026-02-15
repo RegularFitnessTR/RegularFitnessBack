@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../types/gym.enums";
 import { MembershipPlan, MembershipPaymentMethod } from "../types/gym.payment";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -111,6 +112,15 @@ export const updateMembership = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Üyelik güncelleme hatası:", error);
+
+        await logError({
+            functionName: 'updateMembership',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
+
         if (error instanceof HttpsError) {
             throw error;
         }

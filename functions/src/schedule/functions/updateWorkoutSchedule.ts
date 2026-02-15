@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { UpdateWorkoutScheduleData } from "../types/schedule.dto";
 import { validateSessions } from "../utils/validation";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const updateWorkoutSchedule = onCall(async (request) => {
@@ -97,6 +98,14 @@ export const updateWorkoutSchedule = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Program güncelleme hatası:", error);
+
+        await logError({
+            functionName: 'updateWorkoutSchedule',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;

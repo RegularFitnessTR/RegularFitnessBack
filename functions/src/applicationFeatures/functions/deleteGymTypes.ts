@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { DeleteFeatureData, FeatureItem } from "../types/features.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -70,6 +71,15 @@ export const deleteGymTypes = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Gym tipi silme hatası:", error);
+
+        await logError({
+            functionName: 'deleteGymTypes',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
+
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });

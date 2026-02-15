@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { ToggleScheduleStatusData } from "../types/schedule.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const toggleScheduleStatus = onCall(async (request) => {
@@ -87,6 +88,14 @@ export const toggleScheduleStatus = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Program durum değiştirme hatası:", error);
+
+        await logError({
+            functionName: 'toggleScheduleStatus',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;

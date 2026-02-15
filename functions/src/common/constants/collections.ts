@@ -13,5 +13,6 @@ export const COLLECTIONS = {
     PARQ_TESTS: 'parqTests',
     WORKOUT_SCHEDULES: 'workoutSchedules',
     APPLICATION_FEATURES: 'applicationFeatures',
-    ACTIVITY_LOGS: 'activityLogs'
+    ACTIVITY_LOGS: 'activityLogs',
+    ERROR_LOGS: 'errorLogs'
 } as const;

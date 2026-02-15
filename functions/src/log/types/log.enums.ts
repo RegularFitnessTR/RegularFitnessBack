@@ -76,3 +76,12 @@ export enum LogCategory {
     SUPERADMIN = 'SUPERADMIN',
     APPLICATION_FEATURES = 'APPLICATION_FEATURES'
 }
+
+/**
+ * Error severity levels
+ */
+export enum LogSeverity {
+    WARNING = 'WARNING',
+    ERROR = 'ERROR',
+    CRITICAL = 'CRITICAL'
+}

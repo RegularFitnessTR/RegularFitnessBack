@@ -7,6 +7,7 @@ import { SubscriptionStatus } from "../types/subscription.enums";
 import { AssignPackageSubscriptionData, AssignMembershipSubscriptionData } from "../types/subscription.dto";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -169,6 +170,14 @@ export const assignSubscription = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Abonelik atama hatası:", error);
+
+        await logError({
+            functionName: 'assignSubscription',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { studentId: data.studentId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

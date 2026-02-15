@@ -4,6 +4,7 @@ import { db, auth, COLLECTIONS, generateQRCode } from "../../common";
 import { CoachUser } from "../types/coach.model";
 import { CreateCoachData } from "../types/coach.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -94,6 +95,14 @@ export const createCoach = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Hoca oluşturma hatası:", error);
+
+        await logError({
+            functionName: 'createCoach',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error.code === 'auth/email-already-exists') {
             throw new HttpsError('already-exists', 'Bu email adresi zaten kullanımda.');

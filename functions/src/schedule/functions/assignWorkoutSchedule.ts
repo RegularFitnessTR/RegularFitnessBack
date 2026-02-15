@@ -5,6 +5,7 @@ import { WorkoutSchedule } from "../types/schedule.model";
 import { AssignWorkoutScheduleData } from "../types/schedule.dto";
 import { validateSessions } from "../utils/validation";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const assignWorkoutSchedule = onCall(async (request) => {
@@ -113,6 +114,14 @@ export const assignWorkoutSchedule = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Program atama hatası:", error);
+
+        await logError({
+            functionName: 'assignWorkoutSchedule',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { studentId: data.studentId, programName: data.programName }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

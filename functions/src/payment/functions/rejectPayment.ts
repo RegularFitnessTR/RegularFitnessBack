@@ -5,6 +5,7 @@ import { PaymentStatus } from "../types/payment.enums";
 import { ProcessPaymentData } from "../types/payment.dto";
 import { PaymentRequest } from "../types/payment.model";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -82,6 +83,14 @@ export const rejectPayment = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Ödeme reddetme hatası:", error);
+
+        await logError({
+            functionName: 'rejectPayment',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;

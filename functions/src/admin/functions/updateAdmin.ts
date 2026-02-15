@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { db, auth, COLLECTIONS } from "../../common";
 import { UpdateAdminData } from "../types/admin.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const updateAdmin = onCall(async (request) => {
@@ -129,6 +130,14 @@ export const updateAdmin = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Admin güncelleme hatası:", error);
+
+        await logError({
+            functionName: 'updateAdmin',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;

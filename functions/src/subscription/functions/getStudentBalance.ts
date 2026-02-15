@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
+import { logError } from "../../log/utils/logError";
 
 export const getStudentBalance = onCall(async (request) => {
     if (!request.auth) {
@@ -64,6 +65,14 @@ export const getStudentBalance = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Bakiye sorgulama hatası:", error);
+
+        await logError({
+            functionName: 'getStudentBalance',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { studentId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

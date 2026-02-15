@@ -5,6 +5,7 @@ import { db, auth, COLLECTIONS } from "../../common";
 import { SuperAdminUser } from "../types/superadmin.model";
 import { RegisterSuperAdminData } from "../types/superadmin.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 // Define configuration parameter for Master Key
@@ -85,6 +86,12 @@ export const registerSuperAdmin = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Superadmin kayıt hatası:", error);
+
+        await logError({
+            functionName: 'registerSuperAdmin',
+            error,
+            requestData: data
+        });
 
         if (error.code === 'auth/email-already-exists') {
             throw new HttpsError('already-exists', 'Bu email adresi zaten kullanımda.');

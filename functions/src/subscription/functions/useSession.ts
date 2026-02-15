@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription } from "../types/subscription.model";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const useSession = onCall(async (request) => {
@@ -100,6 +101,13 @@ export const useSession = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Ders kullanımı hatası:", error);
+
+        await logError({
+            functionName: 'useSession',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role
+        });
 
         if (error instanceof HttpsError) {
             throw error;

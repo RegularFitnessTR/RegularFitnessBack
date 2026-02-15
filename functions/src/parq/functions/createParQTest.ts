@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { ParQTest } from "../types/parq.model";
 import { CreateParQTestData } from "../types/parq.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const createParQTest = onCall(async (request) => {
@@ -99,6 +100,14 @@ export const createParQTest = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("ParQ testi oluşturma hatası:", error);
+
+        await logError({
+            functionName: 'createParQTest',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { studentId: data.studentId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

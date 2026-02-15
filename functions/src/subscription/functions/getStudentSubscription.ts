@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
+import { logError } from "../../log/utils/logError";
 
 export const getStudentSubscription = onCall(async (request) => {
     // 1. Verify user is authenticated
@@ -50,6 +51,14 @@ export const getStudentSubscription = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Abonelik getirme hatası:", error);
+
+        await logError({
+            functionName: 'getStudentSubscription',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { studentId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

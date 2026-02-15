@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const deleteWorkoutSchedule = onCall(async (request) => {
@@ -62,6 +63,14 @@ export const deleteWorkoutSchedule = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Program silme hatası:", error);
+
+        await logError({
+            functionName: 'deleteWorkoutSchedule',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { scheduleId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

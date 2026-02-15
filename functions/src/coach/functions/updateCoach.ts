@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, auth, COLLECTIONS } from "../../common";
 import { UpdateCoachData } from "../types/coach.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -126,6 +127,14 @@ export const updateCoach = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Hoca güncelleme hatası:", error);
+
+        await logError({
+            functionName: 'updateCoach',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;

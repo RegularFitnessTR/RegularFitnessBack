@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { AddAmenityData } from "../types/gym.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -67,6 +68,15 @@ export const addAmenity = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("İmkan ekleme hatası:", error);
+
+        await logError({
+            functionName: 'addAmenity',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
+
         if (error.code === 'permission-denied' || error.code === 'not-found') {
             throw error;
         }

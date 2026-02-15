@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
+import { logError } from "../../log/utils/logError";
 
 export const getParQTests = onCall(async (request) => {
     if (!request.auth) {
@@ -47,6 +48,14 @@ export const getParQTests = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("ParQ testlerini getirme hatası:", error);
+
+        await logError({
+            functionName: 'getParQTests',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { studentId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

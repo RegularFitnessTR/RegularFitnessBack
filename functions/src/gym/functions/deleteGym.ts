@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -92,6 +93,14 @@ export const deleteGym = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Gym silme hatası:", error);
+
+        await logError({
+            functionName: 'deleteGym',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: { gymId }
+        });
 
         if (error instanceof HttpsError) {
             throw error;

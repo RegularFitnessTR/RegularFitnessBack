@@ -4,6 +4,7 @@ import { db, auth, COLLECTIONS } from "../../common";
 import { StudentUser } from "../types/student.model";
 import { RegisterStudentData } from "../types/student.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const registerStudent = onCall(async (request) => {
@@ -71,6 +72,12 @@ export const registerStudent = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Kayıt hatası:", error);
+
+        await logError({
+            functionName: 'registerStudent',
+            error,
+            requestData: data
+        });
 
         if (error.code === 'auth/email-already-exists') {
             throw new HttpsError('already-exists', 'Bu email adresi zaten kullanımda.');

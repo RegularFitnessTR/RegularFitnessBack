@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { CreateFeatureData, FeatureItem } from "../types/features.dto";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -73,6 +74,15 @@ export const createGymTypes = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Gym tipi oluşturma hatası:", error);
+
+        await logError({
+            functionName: 'createGymTypes',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
+
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });

@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, auth, COLLECTIONS } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const updateCoachProfile = onCall(async (request) => {
@@ -82,6 +83,14 @@ export const updateCoachProfile = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Profil güncelleme hatası:", error);
+
+        await logError({
+            functionName: 'updateCoachProfile',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;

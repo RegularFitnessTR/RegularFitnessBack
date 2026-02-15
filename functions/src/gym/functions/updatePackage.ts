@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../types/gym.enums";
 import { Package } from "../types/gym.payment";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 
@@ -81,6 +82,15 @@ export const updatePackage = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Paket güncelleme hatası:", error);
+
+        await logError({
+            functionName: 'updatePackage',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
+
         if (error instanceof HttpsError) {
             throw error;
         }

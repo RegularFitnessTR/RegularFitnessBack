@@ -7,6 +7,7 @@ import { CreatePackagePaymentData, CreateMembershipPaymentData } from "../types/
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription, MembershipSubscription } from "../../subscription/types/subscription.model";
 import { logActivity } from "../../log/utils/logActivity";
+import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const createPaymentRequest = onCall(async (request) => {
@@ -140,6 +141,14 @@ export const createPaymentRequest = onCall(async (request) => {
 
     } catch (error: any) {
         console.error("Ödeme talebi oluşturma hatası:", error);
+
+        await logError({
+            functionName: 'createPaymentRequest',
+            error,
+            userId: request.auth?.uid,
+            userRole: request.auth?.token?.role,
+            requestData: data
+        });
 
         if (error instanceof HttpsError) {
             throw error;
