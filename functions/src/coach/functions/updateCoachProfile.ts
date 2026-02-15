@@ -1,5 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, auth, COLLECTIONS } from "../../common";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const updateCoachProfile = onCall(async (request) => {
     // Coach updates their own profile
@@ -54,6 +56,24 @@ export const updateCoachProfile = onCall(async (request) => {
         if (Object.keys(firestoreUpdates).length > 0) {
             await db.collection(COLLECTIONS.COACHES).doc(coachUid).update(firestoreUpdates);
         }
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.UPDATE_COACH_PROFILE,
+            category: LogCategory.COACH,
+            performedBy: {
+                uid: coachUid,
+                role: 'coach',
+                name: `${coachData?.firstName} ${coachData?.lastName}`
+            },
+            targetEntity: {
+                id: coachUid,
+                type: 'coach',
+                name: `${coachData?.firstName} ${coachData?.lastName}`
+            },
+            gymId: coachData?.gymId,
+            details: { updatedFields: Object.keys(firestoreUpdates) }
+        });
 
         return {
             success: true,

@@ -3,6 +3,8 @@ import * as admin from "firebase-admin";
 import { db, auth, COLLECTIONS } from "../../common";
 import { StudentUser } from "../types/student.model";
 import { RegisterStudentData } from "../types/student.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const registerStudent = onCall(async (request) => {
     const data = request.data as RegisterStudentData;
@@ -43,6 +45,23 @@ export const registerStudent = onCall(async (request) => {
         };
 
         await db.collection(COLLECTIONS.STUDENTS).doc(userRecord.uid).set(newStudent);
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.REGISTER_STUDENT,
+            category: LogCategory.STUDENT,
+            performedBy: {
+                uid: userRecord.uid,
+                role: 'student',
+                name: `${data.firstName} ${data.lastName}`
+            },
+            targetEntity: {
+                id: userRecord.uid,
+                type: 'student',
+                name: `${data.firstName} ${data.lastName}`
+            },
+            details: { email: data.email }
+        });
 
         return {
             success: true,

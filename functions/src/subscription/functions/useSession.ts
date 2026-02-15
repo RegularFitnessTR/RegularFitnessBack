@@ -3,6 +3,8 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription } from "../types/subscription.model";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const useSession = onCall(async (request) => {
     // Only student can use sessions
@@ -63,6 +65,30 @@ export const useSession = onCall(async (request) => {
 
         // Calculate current balance for response
         const currentBalance = packageSub.totalPaid - packageSub.totalDebt;
+
+        // Log kaydı - gymId'yi coach üzerinden bul
+        let gymId: string | undefined;
+        if (studentData?.coachId) {
+            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(studentData.coachId).get();
+            gymId = coachDoc.data()?.gymId;
+        }
+
+        await logActivity({
+            action: LogAction.USE_SESSION,
+            category: LogCategory.SUBSCRIPTION,
+            performedBy: {
+                uid: studentId,
+                role: 'student',
+                name: request.auth!.token.name || 'Student'
+            },
+            targetEntity: {
+                id: subscriptionId,
+                type: 'subscription',
+                name: `Ders Kullanımı`
+            },
+            gymId: gymId,
+            details: { sessionsUsed: newSessionsUsed, sessionsRemaining: newSessionsRemaining }
+        });
 
         return {
             success: true,

@@ -3,6 +3,8 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { BodyMeasurement } from "../types/measurement.model";
 import { CreateMeasurementData } from "../types/measurement.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const createMeasurement = onCall(async (request) => {
     if (!request.auth) {
@@ -46,7 +48,7 @@ export const createMeasurement = onCall(async (request) => {
             bmi = Math.round(bmi * 10) / 10; // Round to 1 decimal
         }
 
-        const newMeasurement: BodyMeasurement = {
+        const measurement: BodyMeasurement = {
             id: measurementId,
             studentId: data.studentId,
             coachId: request.auth.uid,
@@ -76,7 +78,27 @@ export const createMeasurement = onCall(async (request) => {
             createdAt: admin.firestore.Timestamp.now()
         };
 
-        await measurementRef.set(newMeasurement);
+        await measurementRef.set(measurement);
+
+        // Log kaydı
+        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
+        const coachGymId = coachDoc.data()?.gymId;
+
+        await logActivity({
+            action: LogAction.CREATE_MEASUREMENT,
+            category: LogCategory.MEASUREMENT,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'coach',
+                name: request.auth!.token.name || 'Coach'
+            },
+            targetEntity: {
+                id: measurementId,
+                type: 'measurement',
+                name: `Ölçüm - ${studentData?.firstName} ${studentData?.lastName}`
+            },
+            gymId: coachGymId
+        });
 
         return {
             success: true,

@@ -3,6 +3,9 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../types/gym.enums";
 import { Package } from "../types/gym.payment";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 interface AddPackageData {
     gymId: string;
@@ -49,6 +52,24 @@ export const addPackage = onCall(async (request) => {
         await gymRef.update({
             'paymentMethod.packages': admin.firestore.FieldValue.arrayUnion(data.package),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.ADD_PACKAGE,
+            category: LogCategory.GYM,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: data.gymId,
+                type: 'gym',
+                name: gymData?.name
+            },
+            gymId: data.gymId,
+            details: { packageName: data.package.name }
         });
 
         return { success: true, message: "Paket başarıyla eklendi." };

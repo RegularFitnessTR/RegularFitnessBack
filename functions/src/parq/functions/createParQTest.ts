@@ -3,6 +3,8 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { ParQTest } from "../types/parq.model";
 import { CreateParQTestData } from "../types/parq.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const createParQTest = onCall(async (request) => {
     if (!request.auth) {
@@ -64,6 +66,27 @@ export const createParQTest = onCall(async (request) => {
         };
 
         await parqRef.set(newParQTest);
+
+        // Log kaydı
+        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
+        const coachGymId = coachDoc.data()?.gymId;
+
+        await logActivity({
+            action: LogAction.CREATE_PARQ_TEST,
+            category: LogCategory.PARQ,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'coach',
+                name: request.auth!.token.name || 'Coach'
+            },
+            targetEntity: {
+                id: parqId,
+                type: 'parq',
+                name: `ParQ Test - ${studentData?.firstName} ${studentData?.lastName}`
+            },
+            gymId: coachGymId,
+            details: { studentId: data.studentId, isPassed }
+        });
 
         return {
             success: true,

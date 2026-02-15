@@ -2,6 +2,9 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { RemoveAmenityData } from "../types/gym.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const deleteAmenity = onCall(async (request) => {
     if (!request.auth) {
@@ -36,6 +39,24 @@ export const deleteAmenity = onCall(async (request) => {
         await gymRef.update({
             amenities: admin.firestore.FieldValue.arrayRemove(...data.amenities),
             updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.DELETE_AMENITY,
+            category: LogCategory.GYM,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: data.gymId,
+                type: 'gym',
+                name: gymData.name
+            },
+            gymId: data.gymId,
+            details: { amenities: data.amenities }
         });
 
         return {

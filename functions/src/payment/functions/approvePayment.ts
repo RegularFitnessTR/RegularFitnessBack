@@ -5,6 +5,9 @@ import { PaymentStatus } from "../types/payment.enums";
 import { ProcessPaymentData } from "../types/payment.dto";
 import { PaymentRequest } from "../types/payment.model";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 import { PackageSubscription, MembershipSubscription } from "../../subscription/types/subscription.model";
 
 export const approvePayment = onCall(async (request) => {
@@ -100,9 +103,27 @@ export const approvePayment = onCall(async (request) => {
 
         await batch.commit();
 
+        // Log kaydı
+        await logActivity({
+            action: LogAction.APPROVE_PAYMENT,
+            category: LogCategory.PAYMENT,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: data.paymentRequestId,
+                type: 'payment',
+                name: `Ödeme Onay - ${payment.type}`
+            },
+            gymId: payment.gymId,
+            details: { studentId: payment.studentId, type: payment.type }
+        });
+
         return {
             success: true,
-            message: "Ödeme başarıyla onaylandı."
+            message: "Ödeme talebi onaylandı."
         };
 
     } catch (error: any) {

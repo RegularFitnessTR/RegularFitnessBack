@@ -1,5 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const deleteWorkoutSchedule = onCall(async (request) => {
     if (!request.auth) {
@@ -32,6 +34,26 @@ export const deleteWorkoutSchedule = onCall(async (request) => {
         }
 
         await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(scheduleId).delete();
+
+        // Log kaydı
+        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
+        const coachGymId = coachDoc.data()?.gymId;
+
+        await logActivity({
+            action: LogAction.DELETE_WORKOUT_SCHEDULE,
+            category: LogCategory.SCHEDULE,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'coach',
+                name: request.auth!.token.name || 'Coach'
+            },
+            targetEntity: {
+                id: scheduleId,
+                type: 'schedule',
+                name: schedule?.programName
+            },
+            gymId: coachGymId
+        });
 
         return {
             success: true,

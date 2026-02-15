@@ -3,6 +3,8 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { UpdateWorkoutScheduleData } from "../types/schedule.dto";
 import { validateSessions } from "../utils/validation";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const updateWorkoutSchedule = onCall(async (request) => {
     if (!request.auth) {
@@ -66,6 +68,27 @@ export const updateWorkoutSchedule = onCall(async (request) => {
         }
 
         await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(data.scheduleId).update(updates);
+
+        // Log kaydı
+        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
+        const coachGymId = coachDoc.data()?.gymId;
+
+        await logActivity({
+            action: LogAction.UPDATE_WORKOUT_SCHEDULE,
+            category: LogCategory.SCHEDULE,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'coach',
+                name: request.auth!.token.name || 'Coach'
+            },
+            targetEntity: {
+                id: data.scheduleId,
+                type: 'schedule',
+                name: schedule?.programName
+            },
+            gymId: coachGymId,
+            details: { updatedFields: Object.keys(updates) }
+        });
 
         return {
             success: true,

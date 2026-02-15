@@ -2,6 +2,9 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { CreateFeatureData, FeatureItem } from "../types/features.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const createSocialMediaTypes = onCall(async (request) => {
     if (!request.auth) {
@@ -34,6 +37,22 @@ export const createSocialMediaTypes = onCall(async (request) => {
             items: admin.firestore.FieldValue.arrayUnion(newItem),
             updatedAt: admin.firestore.Timestamp.now()
         }, { merge: true });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.CREATE_SOCIAL_MEDIA_TYPES,
+            category: LogCategory.APPLICATION_FEATURES,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: id,
+                type: 'socialMedia',
+                name: data.name
+            }
+        });
 
         return {
             success: true,

@@ -3,6 +3,9 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../types/gym.enums";
 import { Package } from "../types/gym.payment";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 interface UpdatePackageData {
     gymId: string;
@@ -55,6 +58,23 @@ export const updatePackage = onCall(async (request) => {
                 'paymentMethod.packages': packages,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
+        });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.UPDATE_PACKAGE,
+            category: LogCategory.GYM,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: data.gymId,
+                type: 'gym'
+            },
+            gymId: data.gymId,
+            details: { packageIndex: data.packageIndex, packageName: data.package.name }
         });
 
         return { success: true, message: "Paket başarıyla güncellendi." };

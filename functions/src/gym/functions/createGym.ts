@@ -4,6 +4,9 @@ import { db, COLLECTIONS } from "../../common";
 import { Gym } from "../types/gym.model";
 import { CreateGymData } from "../types/gym.dto";
 import { PaymentMethodType } from "../types/gym.enums";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const createGym = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin mi?
@@ -131,6 +134,23 @@ export const createGym = onCall(async (request) => {
         await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).update({
             gymIds: admin.firestore.FieldValue.arrayUnion(gymId),
             updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.CREATE_GYM,
+            category: LogCategory.GYM,
+            performedBy: {
+                uid: request.auth.uid,
+                role: role as UserRole,
+                name: request.auth.token.name || role
+            },
+            targetEntity: {
+                id: gymId,
+                type: 'gym',
+                name: data.name
+            },
+            gymId: gymId
         });
 
         return {

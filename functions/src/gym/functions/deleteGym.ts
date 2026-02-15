@@ -1,6 +1,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const deleteGym = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin mi?
@@ -64,6 +67,23 @@ export const deleteGym = onCall(async (request) => {
         });
 
         await batch.commit();
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.DELETE_GYM,
+            category: LogCategory.GYM,
+            performedBy: {
+                uid: request.auth.uid,
+                role: role as UserRole,
+                name: request.auth.token.name || role
+            },
+            targetEntity: {
+                id: gymId,
+                type: 'gym',
+                name: gymData?.name
+            },
+            gymId: gymId
+        });
 
         return {
             success: true,

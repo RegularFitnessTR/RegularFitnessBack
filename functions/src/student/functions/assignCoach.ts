@@ -1,6 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const assignCoach = onCall(async (request) => {
     if (!request.auth) {
@@ -35,6 +37,23 @@ export const assignCoach = onCall(async (request) => {
         await db.collection(COLLECTIONS.STUDENTS).doc(studentId).update({
             coachId: coachId,
             updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.ASSIGN_COACH,
+            category: LogCategory.STUDENT,
+            performedBy: {
+                uid: studentId,
+                role: 'student',
+                name: request.auth!.token.name || 'Student'
+            },
+            targetEntity: {
+                id: coachId,
+                type: 'coach',
+                name: `${coachData.firstName} ${coachData.lastName}`
+            },
+            gymId: coachData.gymId
         });
 
         return {

@@ -1,6 +1,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, auth, COLLECTIONS } from "../../common";
 import { UpdateCoachData } from "../types/coach.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const updateCoach = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin veya Superadmin mi?
@@ -97,6 +100,24 @@ export const updateCoach = onCall(async (request) => {
         if (Object.keys(firestoreUpdates).length > 0) {
             await db.collection(COLLECTIONS.COACHES).doc(data.coachUid).update(firestoreUpdates);
         }
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.UPDATE_COACH,
+            category: LogCategory.COACH,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: data.coachUid,
+                type: 'coach',
+                name: `${coachData?.firstName} ${coachData?.lastName}`
+            },
+            gymId: coachData?.gymId,
+            details: { updatedFields: Object.keys(firestoreUpdates) }
+        });
 
         return {
             success: true,

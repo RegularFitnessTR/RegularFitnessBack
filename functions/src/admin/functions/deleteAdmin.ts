@@ -1,5 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, auth, COLLECTIONS } from "../../common";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const deleteAdmin = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Superadmin mi?
@@ -44,6 +46,22 @@ export const deleteAdmin = onCall(async (request) => {
 
         // 4. Delete from admins collection
         await db.collection(COLLECTIONS.ADMINS).doc(adminUid).delete();
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.DELETE_ADMIN,
+            category: LogCategory.ADMIN,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'superadmin',
+                name: request.auth!.token.name || 'SuperAdmin'
+            },
+            targetEntity: {
+                id: adminUid,
+                type: 'admin',
+                name: `${adminData?.firstName} ${adminData?.lastName}`
+            }
+        });
 
         return {
             success: true,

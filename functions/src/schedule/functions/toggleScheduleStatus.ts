@@ -2,6 +2,8 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { ToggleScheduleStatusData } from "../types/schedule.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const toggleScheduleStatus = onCall(async (request) => {
     if (!request.auth) {
@@ -55,6 +57,27 @@ export const toggleScheduleStatus = onCall(async (request) => {
         await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(data.scheduleId).update({
             isActive: data.isActive,
             updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        // Log kaydı
+        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
+        const coachGymId = coachDoc.data()?.gymId;
+
+        await logActivity({
+            action: LogAction.TOGGLE_SCHEDULE_STATUS,
+            category: LogCategory.SCHEDULE,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'coach',
+                name: request.auth!.token.name || 'Coach'
+            },
+            targetEntity: {
+                id: data.scheduleId,
+                type: 'schedule',
+                name: schedule?.programName
+            },
+            gymId: coachGymId,
+            details: { isActive: data.isActive }
         });
 
         return {

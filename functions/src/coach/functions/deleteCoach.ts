@@ -1,5 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, auth, COLLECTIONS } from "../../common";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const deleteCoach = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin veya Superadmin mi?
@@ -44,6 +47,23 @@ export const deleteCoach = onCall(async (request) => {
 
         // 4. Delete from coaches collection
         await db.collection(COLLECTIONS.COACHES).doc(coachUid).delete();
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.DELETE_COACH,
+            category: LogCategory.COACH,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: coachUid,
+                type: 'coach',
+                name: `${coachData?.firstName} ${coachData?.lastName}`
+            },
+            gymId: coachData?.gymId
+        });
 
         return {
             success: true,

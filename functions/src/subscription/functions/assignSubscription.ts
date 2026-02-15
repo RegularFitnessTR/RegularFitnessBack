@@ -1,3 +1,4 @@
+
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
@@ -5,6 +6,9 @@ import { PackageSubscription, MembershipSubscription, MonthlyPayment } from "../
 import { SubscriptionStatus } from "../types/subscription.enums";
 import { AssignPackageSubscriptionData, AssignMembershipSubscriptionData } from "../types/subscription.dto";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const assignSubscription = onCall(async (request) => {
     if (!request.auth) {
@@ -137,6 +141,24 @@ export const assignSubscription = onCall(async (request) => {
         await db.collection(COLLECTIONS.STUDENTS).doc(data.studentId).update({
             activeSubscriptionId: subscriptionId,
             updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.ASSIGN_SUBSCRIPTION,
+            category: LogCategory.SUBSCRIPTION,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: subscriptionId,
+                type: 'subscription',
+                name: `Abonelik - ${'packageName' in data ? data.packageName : data.membershipName} `
+            },
+            gymId: gymId,
+            details: { studentId: data.studentId, type: newSubscription.type }
         });
 
         return {

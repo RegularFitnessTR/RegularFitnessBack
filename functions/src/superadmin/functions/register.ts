@@ -4,6 +4,8 @@ import { defineString } from "firebase-functions/params";
 import { db, auth, COLLECTIONS } from "../../common";
 import { SuperAdminUser } from "../types/superadmin.model";
 import { RegisterSuperAdminData } from "../types/superadmin.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 // Define configuration parameter for Master Key
 const masterKeyParam = defineString("SUPERADMIN_MASTER_KEY", {
@@ -58,6 +60,22 @@ export const registerSuperAdmin = onCall(async (request) => {
         };
 
         await db.collection(COLLECTIONS.SUPERADMINS).doc(userRecord.uid).set(newSuperAdmin);
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.REGISTER_SUPERADMIN,
+            category: LogCategory.SUPERADMIN,
+            performedBy: {
+                uid: userRecord.uid,
+                role: 'superadmin',
+                name: `${data.firstName} ${data.lastName}`
+            },
+            targetEntity: {
+                id: userRecord.uid,
+                type: 'superadmin',
+                name: `${data.firstName} ${data.lastName}`
+            }
+        });
 
         return {
             success: true,

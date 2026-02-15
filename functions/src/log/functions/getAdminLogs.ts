@@ -1,0 +1,103 @@
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { db, COLLECTIONS } from "../../common";
+import { GetLogsData } from "../types/log.dto";
+import { ActivityLog } from "../types/log.model";
+
+export const getAdminLogs = onCall(async (request) => {
+    // 1. Auth kontrolü
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
+    }
+
+    // 2. Yetki kontrolü: Sadece Admin
+    const { role } = request.auth.token;
+    if (role !== 'admin') {
+        throw new HttpsError('permission-denied', 'Bu işlem için Admin yetkisi gereklidir.');
+    }
+
+    const data = request.data as GetLogsData;
+
+    try {
+        // 3. Admin'in gym'lerini al
+        const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+
+        if (!adminDoc.exists) {
+            throw new HttpsError('not-found', 'Admin kaydı bulunamadı.');
+        }
+
+        const adminData = adminDoc.data();
+        const gymIds: string[] = adminData?.gymIds || [];
+
+        if (gymIds.length === 0) {
+            return {
+                success: true,
+                logs: [],
+                count: 0,
+                hasMore: false,
+                lastDocId: null
+            };
+        }
+
+        const limit = Math.min(data.limit || 50, 200);
+
+        // Firestore 'in' sorgusu en fazla 30 değer destekler
+        // gymIds 30'dan fazla olabilir, bu durumda ilk 30'u alıyoruz
+        const queryGymIds = gymIds.slice(0, 30);
+
+        let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACTIVITY_LOGS)
+            .where('gymId', 'in', queryGymIds)
+            .orderBy('timestamp', 'desc');
+
+        // Kategori filtresi
+        if (data.category) {
+            query = query.where('category', '==', data.category);
+        }
+
+        // Aksiyon filtresi
+        if (data.action) {
+            query = query.where('action', '==', data.action);
+        }
+
+        // Tarih aralığı filtresi
+        if (data.startDate) {
+            const startTimestamp = new Date(data.startDate);
+            query = query.where('timestamp', '>=', startTimestamp);
+        }
+
+        if (data.endDate) {
+            const endTimestamp = new Date(data.endDate);
+            query = query.where('timestamp', '<=', endTimestamp);
+        }
+
+        // Sayfalama
+        if (data.startAfter) {
+            const startAfterDoc = await db.collection(COLLECTIONS.ACTIVITY_LOGS).doc(data.startAfter).get();
+            if (startAfterDoc.exists) {
+                query = query.startAfter(startAfterDoc);
+            }
+        }
+
+        query = query.limit(limit);
+
+        const snapshot = await query.get();
+
+        const logs: ActivityLog[] = snapshot.docs.map(doc => doc.data() as ActivityLog);
+
+        return {
+            success: true,
+            logs: logs,
+            count: logs.length,
+            hasMore: logs.length === limit,
+            lastDocId: logs.length > 0 ? logs[logs.length - 1].id : null
+        };
+
+    } catch (error: any) {
+        console.error("Admin log sorgulama hatası:", error);
+
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+
+        throw new HttpsError('internal', 'Log kayıtları sorgulanırken bir hata oluştu.');
+    }
+});

@@ -3,6 +3,9 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../types/gym.enums";
 import { MembershipPlan, MembershipPaymentMethod } from "../types/gym.payment";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 interface UpdateMembershipPlanData {
     name?: string;
@@ -80,6 +83,28 @@ export const updateMembership = onCall(async (request) => {
                 'paymentMethod': updatedPaymentMethod,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
+        });
+
+        // Log kaydı
+        const updatedPlans: string[] = [];
+        if (data.monthly) updatedPlans.push('monthly');
+        if (data.sixMonths) updatedPlans.push('sixMonths');
+        if (data.yearly) updatedPlans.push('yearly');
+
+        await logActivity({
+            action: LogAction.UPDATE_MEMBERSHIP,
+            category: LogCategory.GYM,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: data.gymId,
+                type: 'gym'
+            },
+            gymId: data.gymId,
+            details: { updatedPlans }
         });
 
         return { success: true, message: "Üyelik planları başarıyla güncellendi." };

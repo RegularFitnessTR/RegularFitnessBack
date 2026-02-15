@@ -6,6 +6,8 @@ import { PaymentStatus } from "../types/payment.enums";
 import { CreatePackagePaymentData, CreateMembershipPaymentData } from "../types/payment.dto";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription, MembershipSubscription } from "../../subscription/types/subscription.model";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const createPaymentRequest = onCall(async (request) => {
     if (!request.auth) {
@@ -80,7 +82,7 @@ export const createPaymentRequest = onCall(async (request) => {
             const membershipSub = subscription as MembershipSubscription;
 
             if (monthNumber < 1 || monthNumber > membershipSub.totalMonths) {
-                throw new HttpsError('invalid-argument', `Geçersiz ay numarası. 1-${membershipSub.totalMonths} arası olmalıdır.`);
+                throw new HttpsError('invalid-argument', `Geçersiz ay numarası. 1 - ${membershipSub.totalMonths} arası olmalıdır.`);
             }
 
             const monthlyPayment = membershipSub.monthlyPayments[monthNumber - 1];
@@ -104,11 +106,34 @@ export const createPaymentRequest = onCall(async (request) => {
 
         await paymentRef.set(newPaymentRequest);
 
+        // Log kaydı
+        await logActivity({
+            action: LogAction.CREATE_PAYMENT_REQUEST,
+            category: LogCategory.PAYMENT,
+            performedBy: {
+                uid: studentId,
+                role: 'student',
+                name: request.auth!.token.name || 'Student'
+            },
+            targetEntity: {
+                id: paymentId,
+                type: 'payment',
+                name: `Ödeme Talebi - ${newPaymentRequest.type}`
+            },
+            gymId: gymId,
+            details: {
+                type: newPaymentRequest.type,
+                amount: newPaymentRequest.type === PaymentMethodType.PACKAGE
+                    ? (newPaymentRequest as PackagePaymentRequest).totalAmount
+                    : (newPaymentRequest as MembershipPaymentRequest).monthlyAmount
+            }
+        });
+
         return {
             success: true,
             message: "Ödeme talebiniz oluşturuldu. Hoca veya admin onayı bekleniyor.",
             paymentRequestId: paymentId,
-            totalAmount: subscription?.type === PaymentMethodType.PACKAGE
+            totalAmount: newPaymentRequest.type === PaymentMethodType.PACKAGE
                 ? (newPaymentRequest as PackagePaymentRequest).totalAmount
                 : (newPaymentRequest as MembershipPaymentRequest).monthlyAmount
         };

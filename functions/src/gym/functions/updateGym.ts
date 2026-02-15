@@ -3,6 +3,9 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { UpdateGymData } from "../types/gym.dto";
 import { PaymentMethodType } from "../types/gym.enums";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const updateGym = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin mi?
@@ -93,6 +96,24 @@ export const updateGym = onCall(async (request) => {
         if (Object.keys(updates).length > 0) {
             await db.collection(COLLECTIONS.GYMS).doc(data.gymId).update(updates);
         }
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.UPDATE_GYM,
+            category: LogCategory.GYM,
+            performedBy: {
+                uid: request.auth.uid,
+                role: role as UserRole,
+                name: request.auth.token.name || role
+            },
+            targetEntity: {
+                id: data.gymId,
+                type: 'gym',
+                name: gymData?.name
+            },
+            gymId: data.gymId,
+            details: { updatedFields: Object.keys(updates) }
+        });
 
         return {
             success: true,

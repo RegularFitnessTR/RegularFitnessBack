@@ -4,6 +4,9 @@ import { db, COLLECTIONS } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { ProcessPaymentData } from "../types/payment.dto";
 import { PaymentRequest } from "../types/payment.model";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const rejectPayment = onCall(async (request) => {
     // 1. Yetki Kontrolü: Coach veya Admin
@@ -52,6 +55,24 @@ export const rejectPayment = onCall(async (request) => {
             processedAt: admin.firestore.Timestamp.now(),
             processedBy: request.auth.uid,
             notes: data.notes || 'Ödeme reddedildi.'
+        });
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.REJECT_PAYMENT,
+            category: LogCategory.PAYMENT,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: data.paymentRequestId,
+                type: 'payment',
+                name: `Ödeme Red - ${payment.type}`
+            },
+            gymId: payment.gymId,
+            details: { studentId: payment.studentId, notes: data.notes }
         });
 
         return {

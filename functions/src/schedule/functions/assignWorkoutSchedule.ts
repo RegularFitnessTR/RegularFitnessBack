@@ -4,6 +4,8 @@ import { db, COLLECTIONS } from "../../common";
 import { WorkoutSchedule } from "../types/schedule.model";
 import { AssignWorkoutScheduleData } from "../types/schedule.dto";
 import { validateSessions } from "../utils/validation";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const assignWorkoutSchedule = onCall(async (request) => {
     if (!request.auth) {
@@ -80,7 +82,28 @@ export const assignWorkoutSchedule = onCall(async (request) => {
             createdAt: admin.firestore.Timestamp.now()
         };
 
-        await scheduleRef.set(newSchedule);
+        await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(scheduleId).set(newSchedule);
+
+        // Log kaydı
+        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
+        const coachGymId = coachDoc.data()?.gymId;
+
+        await logActivity({
+            action: LogAction.ASSIGN_WORKOUT_SCHEDULE,
+            category: LogCategory.SCHEDULE,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'coach',
+                name: request.auth!.token.name || 'Coach'
+            },
+            targetEntity: {
+                id: scheduleId,
+                type: 'schedule',
+                name: data.programName
+            },
+            gymId: coachGymId,
+            details: { studentId: data.studentId }
+        });
 
         return {
             success: true,

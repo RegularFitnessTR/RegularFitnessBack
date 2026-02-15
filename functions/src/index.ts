@@ -12,6 +12,7 @@ import { createMeasurement, getMeasurements, getLatestMeasurement } from "./meas
 import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
 import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, getStudentSchedule, toggleScheduleStatus } from "./schedule";
 import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes } from "./applicationFeatures";
+import { getSuperAdminLogs, getAdminLogs } from "./log";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -72,5 +73,8 @@ export {
     createSocialMediaTypes,
     deleteAmenities,
     deleteGymTypes,
-    deleteSocialMediaTypes
+    deleteSocialMediaTypes,
+    // Logs
+    getSuperAdminLogs,
+    getAdminLogs
 };

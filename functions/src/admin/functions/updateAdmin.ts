@@ -2,6 +2,8 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, auth, COLLECTIONS } from "../../common";
 import { UpdateAdminData } from "../types/admin.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const updateAdmin = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Superadmin mi?
@@ -102,6 +104,23 @@ export const updateAdmin = onCall(async (request) => {
         if (Object.keys(firestoreUpdates).length > 0) {
             await db.collection(COLLECTIONS.ADMINS).doc(data.adminUid).update(firestoreUpdates);
         }
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.UPDATE_ADMIN,
+            category: LogCategory.ADMIN,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: 'superadmin',
+                name: request.auth!.token.name || 'SuperAdmin'
+            },
+            targetEntity: {
+                id: data.adminUid,
+                type: 'admin',
+                name: `${adminData?.firstName} ${adminData?.lastName}`
+            },
+            details: { updatedFields: Object.keys(firestoreUpdates) }
+        });
 
         return {
             success: true,

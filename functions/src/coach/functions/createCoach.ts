@@ -3,6 +3,9 @@ import * as admin from "firebase-admin";
 import { db, auth, COLLECTIONS, generateQRCode } from "../../common";
 import { CoachUser } from "../types/coach.model";
 import { CreateCoachData } from "../types/coach.dto";
+import { logActivity } from "../../log/utils/logActivity";
+import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const createCoach = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin veya Superadmin mi?
@@ -63,6 +66,24 @@ export const createCoach = onCall(async (request) => {
         }
 
         await db.collection(COLLECTIONS.COACHES).doc(userRecord.uid).set(newCoach);
+
+        // Log kaydı
+        await logActivity({
+            action: LogAction.CREATE_COACH,
+            category: LogCategory.COACH,
+            performedBy: {
+                uid: request.auth!.uid,
+                role: role as UserRole,
+                name: request.auth!.token.name || role
+            },
+            targetEntity: {
+                id: userRecord.uid,
+                type: 'coach',
+                name: `${data.firstName} ${data.lastName}`
+            },
+            gymId: data.gymId,
+            details: { email: data.email, expertise: data.expertise }
+        });
 
         return {
             success: true,
