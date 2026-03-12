@@ -5,6 +5,7 @@ import { BaseUser } from '../../common/types/base';
  */
 export interface StudentUser extends BaseUser {
     role: 'student';
+    gymId: string;   // Empty string if no gym assigned
     coachId: string; // Empty string if no coach assigned
     birthDate?: FirebaseFirestore.Timestamp;
     gender?: "male" | "female" | "other";

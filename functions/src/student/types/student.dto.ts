@@ -8,4 +8,5 @@ export interface RegisterStudentData {
     lastName: string;
     phoneNumber: string;
     gender?: "male" | "female" | "other";
+    gymPublicId?: string; // Optional - gym public ID to join during registration
 }

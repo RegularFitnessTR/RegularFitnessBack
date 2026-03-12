@@ -16,6 +16,7 @@ export enum LogAction {
     // Student
     REGISTER_STUDENT = 'REGISTER_STUDENT',
     ASSIGN_COACH = 'ASSIGN_COACH',
+    JOIN_GYM = 'JOIN_GYM',
 
     // Gym
     CREATE_GYM = 'CREATE_GYM',

@@ -17,6 +17,24 @@ export const registerStudent = onCall(async (request) => {
         );
     }
 
+    // Gym public ID verilmişse, gym'i doğrula
+    let resolvedGymId = "";
+    if (data.gymPublicId) {
+        const gymSnapshot = await db.collection(COLLECTIONS.GYMS)
+            .where('publicId', '==', data.gymPublicId)
+            .limit(1)
+            .get();
+
+        if (gymSnapshot.empty) {
+            throw new HttpsError(
+                'not-found',
+                'Belirtilen salon kodu bulunamadı. Lütfen kodu kontrol ediniz.'
+            );
+        }
+
+        resolvedGymId = gymSnapshot.docs[0].id;
+    }
+
     try {
         // 1. Create Firebase Auth user
         const userRecord = await auth.createUser({
@@ -42,6 +60,7 @@ export const registerStudent = onCall(async (request) => {
             phoneNumber: data.phoneNumber,
             photoUrl: "",
             createdAt: admin.firestore.Timestamp.now(),
+            gymId: resolvedGymId,  // Empty string if no gym provided
             coachId: "" // No coach assigned initially
         };
 
@@ -61,7 +80,10 @@ export const registerStudent = onCall(async (request) => {
                 type: 'student',
                 name: `${data.firstName} ${data.lastName}`
             },
-            details: { email: data.email }
+            details: {
+                email: data.email,
+                ...(resolvedGymId ? { gymId: resolvedGymId } : {})
+            }
         });
 
         return {

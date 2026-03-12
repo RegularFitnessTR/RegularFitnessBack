@@ -1,7 +1,7 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 
 // Clean module imports using barrel exports
-import { registerStudent, assignCoach } from "./student";
+import { registerStudent, assignCoach, joinGym } from "./student";
 import { createCoach, updateCoach, deleteCoach, updateCoachProfile } from "./coach";
 import { createAdmin, updateAdmin, deleteAdmin } from "./admin";
 import { registerSuperAdmin } from "./superadmin";
@@ -22,6 +22,7 @@ export {
     // Student
     registerStudent,
     assignCoach,
+    joinGym,
     // Coach
     createCoach,
     updateCoach,

@@ -24,6 +24,7 @@ export interface GymAddress {
  */
 export interface Gym {
     id: string;
+    publicId: string;  // Auto-generated unique public ID (RF-XX-XXXXXXXX)
     name: string;
     photoUrl?: string;
     ownerId: string; // Admin UID who created this gym

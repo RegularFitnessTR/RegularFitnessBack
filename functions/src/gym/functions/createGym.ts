@@ -8,6 +8,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
+import { generatePublicId } from "../../common/utils/generatePublicId";
 
 export const createGym = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin mi?
@@ -107,12 +108,16 @@ export const createGym = onCall(async (request) => {
     }
 
     try {
-        // 3. Create gym document
+        // 3. Generate unique public ID
+        const publicId = await generatePublicId(data.name);
+
+        // 4. Create gym document
         const gymRef = db.collection(COLLECTIONS.GYMS).doc();
         const gymId = gymRef.id;
 
         const newGym: Gym = {
             id: gymId,
+            publicId: publicId,
             name: data.name,
             photoUrl: data.photoUrl,
             ownerId: request.auth.uid,
@@ -157,7 +162,8 @@ export const createGym = onCall(async (request) => {
         return {
             success: true,
             message: "Spor salonu başarıyla oluşturuldu.",
-            gymId: gymId
+            gymId: gymId,
+            publicId: publicId
         };
 
     } catch (error: any) {
