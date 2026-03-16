@@ -6,3 +6,5 @@ export * from './types/student.dto';
 export * from './functions/register';
 export * from './functions/assignCoach';
 export * from './functions/joinGym';
+export * from './functions/updateStudentProfile';
+export * from './functions/updateStudentPassword';
