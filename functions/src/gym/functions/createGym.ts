@@ -8,7 +8,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
-import { generatePublicId } from "../../common/utils/generatePublicId";
+import { v4 as uuidv4 } from 'uuid';
 
 export const createGym = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin mi?
@@ -109,7 +109,7 @@ export const createGym = onCall(async (request) => {
 
     try {
         // 3. Generate unique public ID
-        const publicId = await generatePublicId(data.name);
+        const publicId = uuidv4();
 
         // 4. Create gym document
         const gymRef = db.collection(COLLECTIONS.GYMS).doc();

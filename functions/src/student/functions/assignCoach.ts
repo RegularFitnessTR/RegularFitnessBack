@@ -11,25 +11,28 @@ export const assignCoach = onCall(async (request) => {
     }
 
     const studentId = request.auth.uid;
-    const { coachId } = request.data as { coachId: string };
+    const { qrCodeString } = request.data as { qrCodeString: string };
 
-    if (!coachId) {
-        throw new HttpsError('invalid-argument', 'Hoca ID bilgisi eksik.');
-    }
-
-    if (studentId === coachId) {
-        throw new HttpsError('invalid-argument', 'Kendinizi hoca olarak seçemezsiniz.');
+    if (!qrCodeString) {
+        throw new HttpsError('invalid-argument', 'QR kod bilgisi eksik.');
     }
 
     try {
-        // 1. Query from coaches collection
-        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
+        // 1. Query from coaches collection using qrCodeString
+        const coachesSnapshot = await db.collection(COLLECTIONS.COACHES).where('qrCodeString', '==', qrCodeString).limit(1).get();
 
-        if (!coachDoc.exists) {
-            throw new HttpsError('not-found', 'Belirtilen hoca bulunamadı.');
+        if (coachesSnapshot.empty) {
+            throw new HttpsError('not-found', 'Belirtilen QR koda sahip hoca bulunamadı.');
         }
 
+        const coachDoc = coachesSnapshot.docs[0];
+        const coachId = coachDoc.id;
         const coachData = coachDoc.data();
+
+        if (studentId === coachId) {
+            throw new HttpsError('invalid-argument', 'Kendinizi hoca olarak seçemezsiniz.');
+        }
+
         if (coachData?.role !== 'coach') {
             throw new HttpsError('invalid-argument', 'Okutulan QR kodu bir hocaya ait değil.');
         }
@@ -71,7 +74,7 @@ export const assignCoach = onCall(async (request) => {
             error,
             userId: request.auth?.uid,
             userRole: request.auth?.token?.role,
-            requestData: { coachId }
+            requestData: { qrCodeString }
         });
 
         if (error instanceof HttpsError) {
