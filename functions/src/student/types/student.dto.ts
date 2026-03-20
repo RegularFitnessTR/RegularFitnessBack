@@ -7,8 +7,8 @@ export interface RegisterStudentData {
     firstName: string;
     lastName: string;
     phoneNumber: string;
-    gender?: "male" | "female" | "other";
-    birthDate?: FirebaseFirestore.Timestamp; // timestamp as ms string/number or similar format
+    gender: "male" | "female" | "other";
+    birthDate: string; // ISO 8601 date string (e.g. "2000-01-15")
     gymPublicId?: string; // Optional - gym public ID to join during registration
 }
 

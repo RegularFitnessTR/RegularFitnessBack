@@ -10,12 +10,31 @@ import { LogAction, LogCategory } from "../../log/types/log.enums";
 export const registerStudent = onCall(async (request) => {
     const data = request.data as RegisterStudentData;
 
-    if (!data.email || !data.password || !data.firstName || !data.lastName) {
+    if (!data.email || !data.password || !data.firstName || !data.lastName || !data.gender || !data.birthDate) {
         throw new HttpsError(
             'invalid-argument',
-            'Eksik bilgi: Email, şifre, ad ve soyad zorunludur.'
+            'Eksik bilgi: Email, şifre, ad, soyad, cinsiyet ve doğum tarihi zorunludur.'
         );
     }
+
+    // Validate gender value
+    const validGenders = ['male', 'female', 'other'];
+    if (!validGenders.includes(data.gender)) {
+        throw new HttpsError(
+            'invalid-argument',
+            'Geçersiz cinsiyet değeri. male, female veya other olmalıdır.'
+        );
+    }
+
+    // Parse birthDate string to Timestamp
+    const birthDateParsed = new Date(data.birthDate);
+    if (isNaN(birthDateParsed.getTime())) {
+        throw new HttpsError(
+            'invalid-argument',
+            'Geçersiz doğum tarihi formatı.'
+        );
+    }
+    const birthDateTimestamp = admin.firestore.Timestamp.fromDate(birthDateParsed);
 
     // Gym public ID verilmişse, gym'i doğrula
     let resolvedGymId = "";
@@ -59,6 +78,8 @@ export const registerStudent = onCall(async (request) => {
             lastName: data.lastName,
             phoneNumber: data.phoneNumber,
             photoUrl: "",
+            gender: data.gender,
+            birthDate: birthDateTimestamp,
             createdAt: admin.firestore.Timestamp.now(),
             gymId: resolvedGymId,  // Empty string if no gym provided
             coachId: "" // No coach assigned initially
