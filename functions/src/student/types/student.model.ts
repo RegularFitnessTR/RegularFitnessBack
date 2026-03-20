@@ -9,8 +9,6 @@ export interface StudentUser extends BaseUser {
     coachId: string; // Empty string if no coach assigned
     birthDate?: FirebaseFirestore.Timestamp;
     gender?: "male" | "female" | "other";
-    height?: number; // cm
-    weight?: number; // kg
     medicalConditions?: string;
     activeSubscriptionId?: string; // Link to active subscription
 }

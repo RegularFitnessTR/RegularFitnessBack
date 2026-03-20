@@ -53,8 +53,6 @@ export const updateStudentProfile = onCall(async (request) => {
         if (data.lastName) firestoreUpdates.lastName = data.lastName;
         if (data.phoneNumber !== undefined) firestoreUpdates.phoneNumber = data.phoneNumber;
         if (data.gender !== undefined) firestoreUpdates.gender = data.gender;
-        if (data.height !== undefined) firestoreUpdates.height = data.height;
-        if (data.weight !== undefined) firestoreUpdates.weight = data.weight;
         if (data.medicalConditions !== undefined) firestoreUpdates.medicalConditions = data.medicalConditions;
         if (data.birthDate !== undefined) firestoreUpdates.birthDate = data.birthDate;
 

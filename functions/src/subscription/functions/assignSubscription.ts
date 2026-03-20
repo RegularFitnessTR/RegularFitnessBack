@@ -55,12 +55,45 @@ export const assignSubscription = onCall(async (request) => {
             throw new HttpsError('invalid-argument', 'Hoca bir spor salonuna atanmamış.');
         }
 
+        // Fetch gym document to validate payment method
+        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+        if (!gymDoc.exists) {
+            throw new HttpsError('not-found', 'Spor salonu bulunamadı.');
+        }
+
+        const gymData = gymDoc.data();
+        const gymPaymentMethod = gymData?.paymentMethod;
+
+        if (!gymPaymentMethod) {
+            throw new HttpsError('failed-precondition', 'Bu spor salonuna henüz ödeme yöntemi tanımlanmamış.');
+        }
+
         const subscriptionRef = db.collection(COLLECTIONS.SUBSCRIPTIONS).doc();
         const subscriptionId = subscriptionRef.id;
 
         let newSubscription: PackageSubscription | MembershipSubscription;
 
         if ('packageName' in data) {
+            // Validate: gym must have PACKAGE payment type
+            if (gymPaymentMethod.type !== PaymentMethodType.PACKAGE) {
+                throw new HttpsError('invalid-argument', 'Bu spor salonu paket bazlı ödeme yöntemi kullanmıyor.');
+            }
+
+            // Validate: the package must exist in gym's defined packages
+            const matchingPackage = gymPaymentMethod.packages?.find(
+                (pkg: any) =>
+                    pkg.name === data.packageName &&
+                    pkg.totalSessions === data.totalSessions &&
+                    pkg.pricePerSession === data.pricePerSession
+            );
+
+            if (!matchingPackage) {
+                throw new HttpsError(
+                    'invalid-argument',
+                    'Seçilen paket bu spor salonunun tanımlı paketleri arasında bulunamadı.'
+                );
+            }
+
             // Package-based subscription
             const totalPackageDebt = data.totalSessions * data.pricePerSession;
 
@@ -88,6 +121,33 @@ export const assignSubscription = onCall(async (request) => {
                 assignedBy: request.auth.uid
             };
         } else {
+            // Validate: gym must have MEMBERSHIP payment type
+            if (gymPaymentMethod.type !== PaymentMethodType.MEMBERSHIP) {
+                throw new HttpsError('invalid-argument', 'Bu spor salonu üyelik bazlı ödeme yöntemi kullanmıyor.');
+            }
+
+            // Validate: the membership plan must match gym's defined plan
+            const planKey = data.membershipType; // 'monthly' | 'sixMonths' | 'yearly'
+            const gymPlan = gymPaymentMethod[planKey];
+
+            if (!gymPlan) {
+                throw new HttpsError('invalid-argument', `Bu spor salonunda "${planKey}" üyelik planı tanımlı değil.`);
+            }
+
+            if (gymPlan.monthlyPrice !== data.monthlyPayment) {
+                throw new HttpsError(
+                    'invalid-argument',
+                    'Girilen aylık ödeme tutarı, spor salonunun tanımlı planıyla uyuşmuyor.'
+                );
+            }
+
+            if (gymPlan.durationMonths !== data.totalMonths) {
+                throw new HttpsError(
+                    'invalid-argument',
+                    'Girilen süre, spor salonunun tanımlı planıyla uyuşmuyor.'
+                );
+            }
+
             // Membership-based subscription
             const now = admin.firestore.Timestamp.now();
             const nowMs = now.toMillis();
