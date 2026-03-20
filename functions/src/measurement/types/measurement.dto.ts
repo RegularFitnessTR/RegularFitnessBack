@@ -7,20 +7,14 @@ export interface CreateMeasurementData {
 
     height?: number;
     weight?: number;
-    neck?: number;
-    chest?: number;
-    waist?: number;
-    hips?: number;
     shoulders?: number;
-    bicepsRight?: number;
-    bicepsLeft?: number;
-    forearmRight?: number;
-    forearmLeft?: number;
-    thighRight?: number;
-    thighLeft?: number;
-    calfRight?: number;
-    calfLeft?: number;
-    bodyFatPercentage?: number;
+    chest?: number;
+    arm?: number;
+    waist?: number;
+    abdomen?: number;
+    hips?: number;
+    upperLeg?: number;
+    calf?: number;
     notes?: string;
 }
 
@@ -32,19 +26,13 @@ export interface UpdateMeasurementData {
 
     height?: number;
     weight?: number;
-    neck?: number;
-    chest?: number;
-    waist?: number;
-    hips?: number;
     shoulders?: number;
-    bicepsRight?: number;
-    bicepsLeft?: number;
-    forearmRight?: number;
-    forearmLeft?: number;
-    thighRight?: number;
-    thighLeft?: number;
-    calfRight?: number;
-    calfLeft?: number;
-    bodyFatPercentage?: number;
+    chest?: number;
+    arm?: number;
+    waist?: number;
+    abdomen?: number;
+    hips?: number;
+    upperLeg?: number;
+    calf?: number;
     notes?: string;
 }

@@ -9,24 +9,18 @@ export interface BodyMeasurement {
 
     // Body measurements (cm unless specified)
     height?: number;           // Boy (cm)
-    weight?: number;           // Kilo (kg)
-    neck?: number;             // Boyun (cm)
-    chest?: number;            // Göğüs (cm)
-    waist?: number;            // Bel (cm)
-    hips?: number;             // Kalça (cm)
+    weight?: number;           // Ağırlık (kg)
     shoulders?: number;        // Omuz (cm)
-    bicepsRight?: number;      // Sağ pazı (cm)
-    bicepsLeft?: number;       // Sol pazı (cm)
-    forearmRight?: number;     // Sağ ön kol (cm)
-    forearmLeft?: number;      // Sol ön kol (cm)
-    thighRight?: number;       // Sağ uyluk (cm)
-    thighLeft?: number;        // Sol uyluk (cm)
-    calfRight?: number;        // Sağ baldır (cm)
-    calfLeft?: number;         // Sol baldır (cm)
+    chest?: number;            // Göğüs (cm)
+    arm?: number;              // Kol (cm)
+    waist?: number;            // Bel (cm)
+    abdomen?: number;          // Karın (cm)
+    hips?: number;             // Kalça (cm)
+    upperLeg?: number;         // Üst Bacak (cm)
+    calf?: number;             // Kalf (cm)
 
     // Calculated fields
     bmi?: number;              // Body Mass Index
-    bodyFatPercentage?: number;
 
     notes?: string;
     createdBy: string;         // Coach UID
