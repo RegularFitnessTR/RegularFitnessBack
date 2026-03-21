@@ -8,4 +8,5 @@ export * from './functions/assignWorkoutSchedule';
 export * from './functions/updateWorkoutSchedule';
 export * from './functions/deleteWorkoutSchedule';
 export * from './functions/getStudentSchedule';
+export * from './functions/getCoachSchedules';
 export * from './functions/toggleScheduleStatus';

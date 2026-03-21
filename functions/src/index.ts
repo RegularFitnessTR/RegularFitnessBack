@@ -13,6 +13,7 @@ import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
 import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, getStudentSchedule, toggleScheduleStatus } from "./schedule";
 import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes } from "./applicationFeatures";
 import { getSuperAdminLogs, getAdminLogs, getSuperAdminErrorLogs } from "./log";
+import { resetPassword } from "./auth";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -78,5 +79,7 @@ export {
     // Logs
     getSuperAdminLogs,
     getAdminLogs,
-    getSuperAdminErrorLogs
+    getSuperAdminErrorLogs,
+    // Auth
+    resetPassword
 };

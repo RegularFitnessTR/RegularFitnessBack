@@ -7,4 +7,3 @@ export * from './types/base';
 // Utils
 export * from './utils/firebase';
 export * from './utils/qrcode';
-export * from './utils/generatePublicId';
