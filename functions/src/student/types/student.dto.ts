@@ -8,7 +8,7 @@ export interface RegisterStudentData {
     lastName: string;
     phoneNumber: string;
     gender: "male" | "female" | "other";
-    birthDate: string; // ISO 8601 date string (e.g. "2000-01-15")
+    birthDate: any; // Accept string, number (timestamp in ms), or Timestamp object
     gymPublicId?: string; // Optional - gym public ID to join during registration
 }
 
@@ -21,7 +21,7 @@ export interface UpdateStudentProfileData {
     phoneNumber?: string;
     gender?: "male" | "female" | "other";
     medicalConditions?: string;
-    birthDate?: FirebaseFirestore.Timestamp; // timestamp as ms string/number or similar format
+    birthDate?: any; // Accept string, number (timestamp in ms), or Timestamp object
 }
 
 /**

@@ -26,15 +26,28 @@ export const registerStudent = onCall(async (request) => {
         );
     }
 
-    // Parse birthDate string to Timestamp
-    const birthDateParsed = new Date(data.birthDate);
-    if (isNaN(birthDateParsed.getTime())) {
-        throw new HttpsError(
-            'invalid-argument',
-            'Geçersiz doğum tarihi formatı.'
-        );
+    // Parse birthDate
+    let birthDateTimestamp: admin.firestore.Timestamp;
+    if (typeof data.birthDate === 'number') {
+        const ms = data.birthDate > 9999999999 ? data.birthDate : data.birthDate * 1000;
+        birthDateTimestamp = admin.firestore.Timestamp.fromMillis(ms);
+    } else if (typeof data.birthDate === 'string') {
+        const birthDateParsed = new Date(data.birthDate);
+        if (isNaN(birthDateParsed.getTime())) {
+            throw new HttpsError('invalid-argument', 'Geçersiz doğum tarihi formatı.');
+        }
+        birthDateTimestamp = admin.firestore.Timestamp.fromDate(birthDateParsed);
+    } else if (data.birthDate && typeof data.birthDate === 'object') {
+        if ('_seconds' in data.birthDate) {
+            birthDateTimestamp = new admin.firestore.Timestamp(data.birthDate._seconds, data.birthDate._nanoseconds || 0);
+        } else if ('seconds' in data.birthDate) {
+            birthDateTimestamp = new admin.firestore.Timestamp(data.birthDate.seconds, data.birthDate.nanoseconds || 0);
+        } else {
+            throw new HttpsError('invalid-argument', 'Desteklenmeyen doğum tarihi obje formatı.');
+        }
+    } else {
+        throw new HttpsError('invalid-argument', 'Geçersiz doğum tarihi.');
     }
-    const birthDateTimestamp = admin.firestore.Timestamp.fromDate(birthDateParsed);
 
     // Gym public ID verilmişse, gym'i doğrula
     let resolvedGymId = "";

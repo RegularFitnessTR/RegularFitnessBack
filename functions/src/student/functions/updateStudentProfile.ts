@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
 import { db, auth, COLLECTIONS } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
@@ -54,8 +55,28 @@ export const updateStudentProfile = onCall(async (request) => {
         if (data.phoneNumber !== undefined) firestoreUpdates.phoneNumber = data.phoneNumber;
         if (data.gender !== undefined) firestoreUpdates.gender = data.gender;
         if (data.medicalConditions !== undefined) firestoreUpdates.medicalConditions = data.medicalConditions;
-        if (data.birthDate !== undefined) firestoreUpdates.birthDate = data.birthDate;
-
+        if (data.birthDate !== undefined) {
+            let birthDateTimestamp: FirebaseFirestore.Timestamp;
+            if (typeof data.birthDate === 'number') {
+                const ms = data.birthDate > 9999999999 ? data.birthDate : data.birthDate * 1000;
+                birthDateTimestamp = admin.firestore.Timestamp.fromMillis(ms);
+            } else if (typeof data.birthDate === 'string') {
+                const parsed = new Date(data.birthDate);
+                if (isNaN(parsed.getTime())) throw new HttpsError('invalid-argument', 'Geçersiz doğum tarihi formatı.');
+                birthDateTimestamp = admin.firestore.Timestamp.fromDate(parsed);
+            } else if (data.birthDate && typeof data.birthDate === 'object') {
+                if ('_seconds' in data.birthDate) {
+                    birthDateTimestamp = new admin.firestore.Timestamp(data.birthDate._seconds, data.birthDate._nanoseconds || 0);
+                } else if ('seconds' in data.birthDate) {
+                    birthDateTimestamp = new admin.firestore.Timestamp(data.birthDate.seconds, data.birthDate.nanoseconds || 0);
+                } else {
+                    birthDateTimestamp = data.birthDate as FirebaseFirestore.Timestamp;
+                }
+            } else {
+                birthDateTimestamp = data.birthDate as FirebaseFirestore.Timestamp;
+            }
+            firestoreUpdates.birthDate = birthDateTimestamp;
+        }
         if (Object.keys(firestoreUpdates).length > 0) {
             await db.collection(COLLECTIONS.STUDENTS).doc(studentUid).update(firestoreUpdates);
         }
