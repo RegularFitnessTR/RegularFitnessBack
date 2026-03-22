@@ -19,6 +19,7 @@ export interface UpdateCoachData {
     coachUid: string;
     firstName?: string;
     lastName?: string;
+    photoUrl?: string;
     email?: string;
     phoneNumber?: string;
     expertise?: string;

@@ -18,6 +18,7 @@ export interface RegisterStudentData {
 export interface UpdateStudentProfileData {
     firstName?: string;
     lastName?: string;
+    photoUrl?: string;
     phoneNumber?: string;
     gender?: "male" | "female" | "other";
     medicalConditions?: string;

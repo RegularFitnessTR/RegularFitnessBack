@@ -41,6 +41,10 @@ export const updateCoachProfile = onCall(async (request) => {
             authUpdates.phoneNumber = data.phoneNumber || null;
         }
 
+        if (data.photoUrl !== undefined) {
+            authUpdates.photoURL = data.photoUrl || null;
+        }
+
         if (Object.keys(authUpdates).length > 0) {
             await auth.updateUser(coachUid, authUpdates);
         }
@@ -50,6 +54,7 @@ export const updateCoachProfile = onCall(async (request) => {
 
         if (data.firstName) firestoreUpdates.firstName = data.firstName;
         if (data.lastName) firestoreUpdates.lastName = data.lastName;
+        if (data.photoUrl !== undefined) firestoreUpdates.photoUrl = data.photoUrl;
         if (data.phoneNumber !== undefined) firestoreUpdates.phoneNumber = data.phoneNumber;
         if (data.expertise !== undefined) firestoreUpdates.expertise = data.expertise;
         if (data.experienceYears !== undefined) firestoreUpdates.experienceYears = data.experienceYears;
