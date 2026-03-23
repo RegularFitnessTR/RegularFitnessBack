@@ -14,3 +14,4 @@ export * from './functions/updatePackage';
 export * from './functions/updateMembership';
 export * from './functions/addAmenity';
 export * from './functions/deleteAmenity';
+export * from './functions/deletePackage';

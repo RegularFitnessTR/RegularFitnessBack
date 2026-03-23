@@ -5,7 +5,7 @@ import { registerStudent, assignCoach, joinGym, updateStudentProfile } from "./s
 import { createCoach, updateCoach, deleteCoach, updateCoachProfile } from "./coach";
 import { createAdmin, updateAdmin, deleteAdmin } from "./admin";
 import { registerSuperAdmin } from "./superadmin";
-import { createGym, updateGym, deleteGym, getGymDetails, addPackage, updatePackage, updateMembership, addAmenity, deleteAmenity } from "./gym";
+import { createGym, updateGym, deleteGym, getGymDetails, addPackage, updatePackage, deletePackage, updateMembership, addAmenity, deleteAmenity } from "./gym";
 import { assignSubscription, getStudentSubscription, useSession, getStudentBalance } from "./subscription";
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
 import { createMeasurement, getMeasurements, getLatestMeasurement } from "./measurement";
@@ -43,6 +43,7 @@ export {
     getGymDetails,
     addPackage,
     updatePackage,
+    deletePackage,
     updateMembership,
     addAmenity,
     deleteAmenity,

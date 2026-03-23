@@ -21,12 +21,29 @@ export const getLatestMeasurement = onCall(async (request) => {
             if (studentId !== request.auth.uid) {
                 throw new HttpsError('permission-denied', 'Başka öğrencinin ölçümlerini görüntüleyemezsiniz.');
             }
-        } else if (role === 'coach') {
+        } else if (role === 'superadmin') {
+            // Superadmin has access to everything
+        } else if (role === 'admin' || role === 'coach') {
             const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(studentId).get();
+            if (!studentDoc.exists) {
+                throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
+            }
             const studentData = studentDoc.data();
 
-            if (studentData?.coachId !== request.auth.uid) {
-                throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+            if (role === 'coach') {
+                if (studentData?.coachId !== request.auth.uid) {
+                    throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+                }
+            } else if (role === 'admin') {
+                // Admin must own the gym the student belongs to
+                const gymId = studentData?.gymId;
+                if (!gymId) {
+                    throw new HttpsError('permission-denied', 'Öğrenci bir spor salonuna atanmamış.');
+                }
+                const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+                if (!gymDoc.exists || gymDoc.data()?.ownerId !== request.auth.uid) {
+                    throw new HttpsError('permission-denied', 'Bu spor salonundaki öğrencileri görüntüleme yetkiniz yok.');
+                }
             }
         } else {
             throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
