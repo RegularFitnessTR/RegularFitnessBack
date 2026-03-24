@@ -35,13 +35,16 @@ export const getLatestMeasurement = onCall(async (request) => {
                     throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
                 }
             } else if (role === 'admin') {
-                // Admin must own the gym the student belongs to
                 const gymId = studentData?.gymId;
                 if (!gymId) {
                     throw new HttpsError('permission-denied', 'Öğrenci bir spor salonuna atanmamış.');
                 }
-                const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
-                if (!gymDoc.exists || gymDoc.data()?.ownerId !== request.auth.uid) {
+                
+                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+                const adminData = adminDoc.data();
+                const adminGymIds = adminData?.gymIds || [];
+
+                if (!adminGymIds.includes(gymId)) {
                     throw new HttpsError('permission-denied', 'Bu spor salonundaki öğrencileri görüntüleme yetkiniz yok.');
                 }
             }

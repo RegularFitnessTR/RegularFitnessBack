@@ -13,8 +13,8 @@ export const createMeasurement = onCall(async (request) => {
     }
 
     const { role } = request.auth.token;
-    if (role !== 'coach') {
-        throw new HttpsError('permission-denied', 'Bu işlem sadece hocalar tarafından yapılabilir.');
+    if (role !== 'coach' && role !== 'admin' && role !== 'superadmin') {
+        throw new HttpsError('permission-denied', 'Bu işlem sadece hocalar, adminler ve superadminler tarafından yapılabilir.');
     }
 
     const data = request.data as CreateMeasurementData;
@@ -32,10 +32,25 @@ export const createMeasurement = onCall(async (request) => {
         }
 
         const studentData = studentDoc.data();
+        const studentGymId = studentData?.gymId;
 
-        // Verify coach is assigned to this student
-        if (studentData?.coachId !== request.auth.uid) {
-            throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+        if (!studentGymId) {
+            throw new HttpsError('failed-precondition', 'Öğrenci bir spor salonuna atanmamış.');
+        }
+
+        // Authorization check
+        if (role === 'coach') {
+            if (studentData?.coachId !== request.auth.uid) {
+                throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+            }
+        } else if (role === 'admin') {
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+            const adminData = adminDoc.data();
+            const adminGymIds = adminData?.gymIds || [];
+
+            if (!adminGymIds.includes(studentGymId)) {
+                throw new HttpsError('permission-denied', 'Bu öğrencinin spor salonuna erişim yetkiniz yok.');
+            }
         }
 
         const measurementRef = db.collection(COLLECTIONS.MEASUREMENTS).doc();
@@ -52,7 +67,8 @@ export const createMeasurement = onCall(async (request) => {
         const measurement: BodyMeasurement = {
             id: measurementId,
             studentId: data.studentId,
-            coachId: request.auth.uid,
+            coachId: studentData.coachId || '',
+            gymId: studentGymId,
             measurementDate: data.measurementDate || admin.firestore.Timestamp.now(),
 
             height: data.height,
@@ -74,8 +90,7 @@ export const createMeasurement = onCall(async (request) => {
         await measurementRef.set(measurement);
 
         // Log kaydı
-        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
-        const coachGymId = coachDoc.data()?.gymId;
+
 
         await logActivity({
             action: LogAction.CREATE_MEASUREMENT,
@@ -90,7 +105,7 @@ export const createMeasurement = onCall(async (request) => {
                 type: 'measurement',
                 name: `Ölçüm - ${studentData?.firstName} ${studentData?.lastName}`
             },
-            gymId: coachGymId
+            gymId: studentGymId
         });
 
         return {

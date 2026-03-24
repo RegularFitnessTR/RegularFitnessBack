@@ -5,7 +5,9 @@ export interface BodyMeasurement {
     id: string;
     studentId: string;
     coachId: string;
+    gymId: string;
     measurementDate: FirebaseFirestore.Timestamp;
+
 
     // Body measurements (cm unless specified)
     height?: number;           // Boy (cm)
