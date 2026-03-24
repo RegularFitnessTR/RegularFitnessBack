@@ -7,14 +7,9 @@ import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const updateAdmin = onCall(async (request) => {
-    // 1. Yetki Kontrolü: İsteği yapan kişi Superadmin mi?
+    // 1. Yetki Kontrolü: İsteği yapan kişi Superadmin mi yoksa kendisi mi?
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
-    }
-
-    // Token içindeki custom claim'i kontrol et
-    if (request.auth.token.role !== 'superadmin' && !request.auth.token.superadmin) {
-        throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok (Sadece Superadmin).');
     }
 
     const data = request.data as UpdateAdminData;
@@ -24,6 +19,18 @@ export const updateAdmin = onCall(async (request) => {
             'invalid-argument',
             'Admin UID belirtilmesi zorunludur.'
         );
+    }
+
+    const isSuperAdmin = request.auth.token.role === 'superadmin' || !!request.auth.token.superadmin;
+    const isUpdatingSelf = request.auth.uid === data.adminUid;
+
+    if (!isSuperAdmin && !isUpdatingSelf) {
+        throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
+    }
+
+    // Admin kendi gym yetkilerini değiştiremez, sadece Superadmin yapabilir.
+    if (!isSuperAdmin && (data.gymIds !== undefined || data.addGymIds !== undefined || data.removeGymIds !== undefined)) {
+        throw new HttpsError('permission-denied', 'Kendi gym yetkilerinizi değiştiremezsiniz. Bu işlem için Superadmin ile iletişime geçiniz.');
     }
 
     try {
@@ -61,6 +68,10 @@ export const updateAdmin = onCall(async (request) => {
             authUpdates.phoneNumber = data.phoneNumber || null;
         }
 
+        if (data.photoUrl) {
+            authUpdates.photoURL = data.photoUrl;
+        }
+
         // Auth güncellemesi varsa uygula
         if (Object.keys(authUpdates).length > 0) {
             await auth.updateUser(data.adminUid, authUpdates);
@@ -83,6 +94,10 @@ export const updateAdmin = onCall(async (request) => {
 
         if (data.email) {
             firestoreUpdates.email = data.email;
+        }
+
+        if (data.photoUrl) {
+            firestoreUpdates.photoUrl = data.photoUrl;
         }
 
         // GymIds management - three modes:
@@ -112,8 +127,8 @@ export const updateAdmin = onCall(async (request) => {
             category: LogCategory.ADMIN,
             performedBy: {
                 uid: request.auth!.uid,
-                role: 'superadmin',
-                name: request.auth!.token.name || 'SuperAdmin'
+                role: isSuperAdmin ? 'superadmin' : 'admin',
+                name: request.auth!.token.name || (isSuperAdmin ? 'SuperAdmin' : 'Admin')
             },
             targetEntity: {
                 id: data.adminUid,

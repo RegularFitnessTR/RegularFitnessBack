@@ -19,6 +19,7 @@ export interface UpdateAdminData {
     lastName?: string;
     phoneNumber?: string;
     email?: string;
+    photoUrl?: string;
     // Three ways to update gymIds:
     gymIds?: string[]; // Replace all gym IDs
     addGymIds?: string[]; // Add specific gym IDs
