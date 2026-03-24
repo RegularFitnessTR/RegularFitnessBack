@@ -9,12 +9,34 @@ export const getCoachSchedules = onCall(async (request) => {
 
     try {
         const { role } = request.auth.token;
+        const data = request.data as { coachId?: string };
+        let coachId = request.auth.uid;
 
-        if (role !== 'coach') {
-            throw new HttpsError('permission-denied', 'Bu işlem için koç yetkiniz yok.');
+        if (role === 'admin' || role === 'superadmin') {
+            if (!data.coachId) {
+                throw new HttpsError('invalid-argument', 'Hoca ID belirtilmesi zorunludur.');
+            }
+            coachId = data.coachId;
+
+            if (role === 'admin') {
+                const doc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
+                if (!doc.exists) {
+                    throw new HttpsError('not-found', 'Hoca bulunamadı.');
+                }
+                const coachData = doc.data();
+                const coachGymId = coachData?.gymId;
+
+                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+                const adminData = adminDoc.data();
+                const adminGymIds = adminData?.gymIds || [];
+
+                if (!coachGymId || !adminGymIds.includes(coachGymId)) {
+                    throw new HttpsError('permission-denied', 'Bu hocanın spor salonuna erişim yetkiniz yok.');
+                }
+            }
+        } else if (role !== 'coach') {
+            throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
         }
-
-        const coachId = request.auth.uid;
 
         // Get all active schedules for this coach
         const snapshot = await db.collection(COLLECTIONS.WORKOUT_SCHEDULES)

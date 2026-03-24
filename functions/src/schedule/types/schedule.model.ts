@@ -17,6 +17,7 @@ export interface WorkoutSchedule {
     id: string;
     studentId: string;
     coachId: string;
+    gymId: string;
 
     // Program metadata
     programName: string;

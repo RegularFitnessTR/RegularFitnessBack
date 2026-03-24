@@ -10,8 +10,8 @@ export const deleteWorkoutSchedule = onCall(async (request) => {
     }
 
     const { role } = request.auth.token;
-    if (role !== 'coach') {
-        throw new HttpsError('permission-denied', 'Bu işlem sadece hocalar tarafından yapılabilir.');
+    if (role !== 'coach' && role !== 'admin' && role !== 'superadmin') {
+        throw new HttpsError('permission-denied', 'Bu işlem sadece hocalar, adminler ve superadminler tarafından yapılabilir.');
     }
 
     const { scheduleId } = request.data;
@@ -28,17 +28,27 @@ export const deleteWorkoutSchedule = onCall(async (request) => {
         }
 
         const schedule = scheduleDoc.data();
+        const scheduleGymId = schedule?.gymId;
 
-        // Verify coach owns this schedule
-        if (schedule?.coachId !== request.auth.uid) {
-            throw new HttpsError('permission-denied', 'Bu programa erişim yetkiniz yok.');
+        // Authorization check
+        if (role === 'coach') {
+            if (schedule?.coachId !== request.auth.uid) {
+                throw new HttpsError('permission-denied', 'Bu programa erişim yetkiniz yok.');
+            }
+        } else if (role === 'admin') {
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+            const adminData = adminDoc.data();
+            const adminGymIds = adminData?.gymIds || [];
+
+            if (!scheduleGymId || !adminGymIds.includes(scheduleGymId)) {
+                throw new HttpsError('permission-denied', 'Bu programın spor salonuna erişim yetkiniz yok.');
+            }
         }
 
         await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(scheduleId).delete();
 
         // Log kaydı
-        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
-        const coachGymId = coachDoc.data()?.gymId;
+
 
         await logActivity({
             action: LogAction.DELETE_WORKOUT_SCHEDULE,
@@ -53,7 +63,7 @@ export const deleteWorkoutSchedule = onCall(async (request) => {
                 type: 'schedule',
                 name: schedule?.programName
             },
-            gymId: coachGymId
+            gymId: scheduleGymId
         });
 
         return {

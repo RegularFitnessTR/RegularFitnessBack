@@ -16,20 +16,31 @@ export const getStudentSchedule = onCall(async (request) => {
     try {
         const { role } = request.auth.token;
 
-        // Authorization: Coach (own students) or Student (self)
+        // Authorization: Coach (own students), Student (self), or Admin/Superadmin
         if (role === 'student') {
             if (studentId !== request.auth.uid) {
                 throw new HttpsError('permission-denied', 'Başka öğrencinin programını görüntüleyemezsiniz.');
             }
-        } else if (role === 'coach') {
+        } else {
             const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(studentId).get();
             const studentData = studentDoc.data();
+            const studentGymId = studentData?.gymId;
 
-            if (studentData?.coachId !== request.auth.uid) {
-                throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+            if (role === 'coach') {
+                if (studentData?.coachId !== request.auth.uid) {
+                    throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+                }
+            } else if (role === 'admin') {
+                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+                const adminData = adminDoc.data();
+                const adminGymIds = adminData?.gymIds || [];
+
+                if (!studentGymId || !adminGymIds.includes(studentGymId)) {
+                    throw new HttpsError('permission-denied', 'Bu öğrencinin spor salonuna erişim yetkiniz yok.');
+                }
+            } else if (role !== 'superadmin') {
+                throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
             }
-        } else {
-            throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
         }
 
         // Get active schedule
