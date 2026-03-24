@@ -58,6 +58,12 @@ export const createPaymentRequest = onCall(async (request) => {
             }
 
             const packageSub = subscription as PackageSubscription;
+
+            // Check if already paid for all sessions and has no debt
+            if (packageSub.totalPaid >= packageSub.totalDebt && packageSub.currentBalance >= 0) {
+                throw new HttpsError('already-exists', 'Bütün paketlerinizi zaten ödediniz ve borcunuz bulunmuyor.');
+            }
+
             const totalAmount = sessionCount * packageSub.pricePerSession;
 
             newPaymentRequest = {
