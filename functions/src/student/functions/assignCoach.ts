@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { StudentUser } from "../types/student.model";
 
 export const assignCoach = onCall(async (request) => {
     if (!request.auth) {
@@ -18,6 +19,17 @@ export const assignCoach = onCall(async (request) => {
     }
 
     try {
+        // 0. Fetch student document to check gymId
+        const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(studentId).get();
+        if (!studentDoc.exists) {
+            throw new HttpsError('not-found', 'Öğrenci kaydı bulunamadı.');
+        }
+        const studentData = studentDoc.data() as StudentUser;
+
+        if (!studentData.gymId) {
+            throw new HttpsError('failed-precondition', 'Henüz bir spor salonuna kayıtlı değilsiniz. Lütfen önce bir spor salonuna kaydolun.');
+        }
+
         // 1. Query from coaches collection using qrCodeString
         const coachesSnapshot = await db.collection(COLLECTIONS.COACHES).where('qrCodeString', '==', qrCodeString).limit(1).get();
 
@@ -37,7 +49,12 @@ export const assignCoach = onCall(async (request) => {
             throw new HttpsError('invalid-argument', 'Okutulan QR kodu bir hocaya ait değil.');
         }
 
-        // 2. Update student in students collection
+        // 2. Check if student and coach are in the same gym
+        if (studentData.gymId !== coachData.gymId) {
+            throw new HttpsError('permission-denied', 'Sadece kendi spor salonunuzdaki hocalara kayıt olabilirsiniz.');
+        }
+
+        // 3. Update student in students collection
         await db.collection(COLLECTIONS.STUDENTS).doc(studentId).update({
             coachId: coachId,
             updatedAt: admin.firestore.Timestamp.now()
