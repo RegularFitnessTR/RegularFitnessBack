@@ -14,5 +14,6 @@ export const COLLECTIONS = {
     WORKOUT_SCHEDULES: 'workoutSchedules',
     APPLICATION_FEATURES: 'applicationFeatures',
     ACTIVITY_LOGS: 'activityLogs',
-    ERROR_LOGS: 'errorLogs'
+    ERROR_LOGS: 'errorLogs',
+    SESSIONS: 'sessions'
 } as const;

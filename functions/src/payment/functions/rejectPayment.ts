@@ -8,6 +8,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
+import { sendNotification } from "../../notification/utils/sendNotification";
 
 export const rejectPayment = onCall(async (request) => {
     // 1. Yetki Kontrolü: Coach veya Admin
@@ -56,6 +57,19 @@ export const rejectPayment = onCall(async (request) => {
             processedAt: admin.firestore.Timestamp.now(),
             processedBy: request.auth.uid,
             notes: data.notes || 'Ödeme reddedildi.'
+        });
+
+        await sendNotification({
+            recipients: [{ ids: [payment.studentId], role: "student" }],
+            notification: {
+                title: "Ödeme Talebiniz Reddedildi",
+                body: data.notes || "Ödeme talebiniz reddedildi. Detaylar için uygulamayı açın."
+            },
+            data: {
+                type: "payment_rejected",
+                paymentId: data.paymentRequestId
+            },
+            gymId: payment.gymId
         });
 
         // Log kaydı

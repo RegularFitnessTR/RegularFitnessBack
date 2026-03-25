@@ -3,13 +3,14 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { ProcessPaymentData } from "../types/payment.dto";
-import { PaymentRequest } from "../types/payment.model";
+import { MembershipPaymentRequest, PackagePaymentRequest, PaymentRequest } from "../types/payment.model";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 import { PackageSubscription, MembershipSubscription } from "../../subscription/types/subscription.model";
+import { sendNotification } from "../../notification/utils/sendNotification";
 
 export const approvePayment = onCall(async (request) => {
     if (!request.auth) {
@@ -104,6 +105,21 @@ export const approvePayment = onCall(async (request) => {
 
         await batch.commit();
 
+
+        await sendNotification({
+            recipients: [{ ids: [payment.studentId], role: "student" }],
+            notification: {
+                title: "Ödemeniz Onaylandı",
+                body: payment.type === PaymentMethodType.PACKAGE
+                    ? `${(payment as PackagePaymentRequest).totalAmount}₺ tutarındaki ödemeniz onaylandı.`
+                    : `${(payment as MembershipPaymentRequest).monthNumber}. ay ödemesi onaylandı.`
+            },
+            data: {
+                type: "payment_approved",
+                paymentId: data.paymentRequestId
+            },
+            gymId: payment.gymId
+        });
         // Log kaydı
         await logActivity({
             action: LogAction.APPROVE_PAYMENT,

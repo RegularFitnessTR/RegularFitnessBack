@@ -9,6 +9,7 @@ import { PackageSubscription, MembershipSubscription } from "../../subscription/
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { sendNotification } from "../../notification/utils/sendNotification";
 
 export const createPaymentRequest = onCall(async (request) => {
     if (!request.auth) {
@@ -112,7 +113,29 @@ export const createPaymentRequest = onCall(async (request) => {
         }
 
         await paymentRef.set(newPaymentRequest);
+        await paymentRef.set(newPaymentRequest);
+        const [coachSnap, adminSnap] = await Promise.all([
+            db.collection(COLLECTIONS.COACHES).where("gymId", "==", gymId).get(),
+            db.collection(COLLECTIONS.ADMINS).where("gymId", "==", gymId).get()
+        ]);
 
+        const coachIds = coachSnap.docs.map(d => d.id);
+        const adminIds = adminSnap.docs.map(d => d.id);
+        await sendNotification({
+            recipients: [
+                { ids: coachIds, role: "coach" },
+                { ids: adminIds, role: "admin" }
+            ],
+            notification: {
+                title: "Yeni Ödeme Talebi",
+                body: "Onay bekleyen yeni bir ödeme talebi var."
+            },
+            data: {
+                type: "payment_request_created",
+                paymentId: paymentId
+            },
+            gymId
+        });
         // Log kaydı
         await logActivity({
             action: LogAction.CREATE_PAYMENT_REQUEST,
