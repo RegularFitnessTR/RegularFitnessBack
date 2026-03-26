@@ -60,9 +60,16 @@ export const createPaymentRequest = onCall(async (request) => {
 
             const packageSub = subscription as PackageSubscription;
 
-            // Check if already paid for all sessions and has no debt
-            if (packageSub.totalPaid >= packageSub.totalDebt && packageSub.currentBalance >= 0) {
+            // Check if already paid for all sessions
+            const remainingDebt = packageSub.totalDebt - packageSub.totalPaid;
+            if (remainingDebt <= 0) {
                 throw new HttpsError('already-exists', 'Bütün paketlerinizi zaten ödediniz ve borcunuz bulunmuyor.');
+            }
+
+            // Check if requested sessions exceed remaining unpaid sessions
+            const maxPayableSessions = Math.ceil(remainingDebt / packageSub.pricePerSession);
+            if (sessionCount > maxPayableSessions) {
+                throw new HttpsError('invalid-argument', `En fazla ${maxPayableSessions} ders için ödeme yapabilirsiniz. Kalan borcunuz: ${remainingDebt}₺`);
             }
 
             const totalAmount = sessionCount * packageSub.pricePerSession;
@@ -112,7 +119,6 @@ export const createPaymentRequest = onCall(async (request) => {
             };
         }
 
-        await paymentRef.set(newPaymentRequest);
         await paymentRef.set(newPaymentRequest);
         const [coachSnap, adminSnap] = await Promise.all([
             db.collection(COLLECTIONS.COACHES).where("gymId", "==", gymId).get(),
