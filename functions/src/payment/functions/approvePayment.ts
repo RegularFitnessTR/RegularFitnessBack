@@ -63,6 +63,12 @@ export const approvePayment = onCall(async (request) => {
             // Package-based: Update debt tracking
             const subscription = subscriptionDoc.data() as PackageSubscription;
 
+            // Prevent overpayment
+            const remainingDebt = subscription.totalDebt - subscription.totalPaid;
+            if (payment.totalAmount > remainingDebt) {
+                throw new HttpsError('failed-precondition', `Ödeme tutarı (${payment.totalAmount}₺) kalan borçtan (${remainingDebt}₺) fazla. Bu ödeme onaylanamaz.`);
+            }
+
             const newTotalPaid = subscription.totalPaid + payment.totalAmount;
             const newCurrentBalance = newTotalPaid - subscription.totalDebt;
 
