@@ -8,7 +8,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
-import { sendNotification } from "../../notification/utils/sendNotification";
+import { sendAndStoreNotification } from "../../notification/utils/sendAndStoreNotification";
 
 export const rejectPayment = onCall(async (request) => {
     // 1. Yetki Kontrolü: Coach veya Admin
@@ -59,7 +59,7 @@ export const rejectPayment = onCall(async (request) => {
             notes: data.notes || 'Ödeme reddedildi.'
         });
 
-        await sendNotification({
+        await sendAndStoreNotification({
             recipients: [{ ids: [payment.studentId], role: "student" }],
             notification: {
                 title: "Ödeme Talebiniz Reddedildi",

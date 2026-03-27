@@ -9,7 +9,7 @@ import { PackageSubscription, MembershipSubscription } from "../../subscription/
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
-import { sendNotification } from "../../notification/utils/sendNotification";
+import { sendAndStoreNotification } from "../../notification/utils/sendAndStoreNotification";
 
 export const createPaymentRequest = onCall(async (request) => {
     if (!request.auth) {
@@ -127,7 +127,7 @@ export const createPaymentRequest = onCall(async (request) => {
 
         const coachIds = coachSnap.docs.map(d => d.id);
         const adminIds = adminSnap.docs.map(d => d.id);
-        await sendNotification({
+        await sendAndStoreNotification({
             recipients: [
                 { ids: coachIds, role: "coach" },
                 { ids: adminIds, role: "admin" }

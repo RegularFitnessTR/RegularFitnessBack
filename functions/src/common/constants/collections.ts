@@ -6,6 +6,7 @@ export const COLLECTIONS = {
     COACHES: 'coaches',
     ADMINS: 'admins',
     SUPERADMINS: 'superadmins',
+    NOTIFICATIONS: 'notifications',
     GYMS: 'gyms',
     SUBSCRIPTIONS: 'subscriptions',
     PAYMENT_REQUESTS: 'paymentRequests',

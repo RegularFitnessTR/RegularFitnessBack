@@ -10,7 +10,7 @@ import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 import { PackageSubscription, MembershipSubscription } from "../../subscription/types/subscription.model";
-import { sendNotification } from "../../notification/utils/sendNotification";
+import { sendAndStoreNotification } from "../../notification/utils/sendAndStoreNotification";
 
 export const approvePayment = onCall(async (request) => {
     if (!request.auth) {
@@ -112,7 +112,7 @@ export const approvePayment = onCall(async (request) => {
         await batch.commit();
 
 
-        await sendNotification({
+        await sendAndStoreNotification({
             recipients: [{ ids: [payment.studentId], role: "student" }],
             notification: {
                 title: "Ödemeniz Onaylandı",

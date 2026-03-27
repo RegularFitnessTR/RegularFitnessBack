@@ -14,7 +14,7 @@ import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, ge
 import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes } from "./applicationFeatures";
 import { getSuperAdminLogs, getAdminLogs, getSuperAdminErrorLogs } from "./log";
 import { resetPassword } from "./auth";
-import { sendSessionReminder } from "./notification";
+import { sendSessionReminder, getMyNotifications, markNotificationAsRead } from "./notification";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -86,5 +86,7 @@ export {
     // Auth
     resetPassword,
     // Notification
-    sendSessionReminder
+    sendSessionReminder,
+    getMyNotifications,
+    markNotificationAsRead
 };
