@@ -20,15 +20,47 @@ export const getMyNotifications = onCall(async (request) => {
         const limit = Number.isNaN(requestedLimit)
             ? 30
             : Math.min(Math.max(requestedLimit, 1), 100);
+        const selectedGymId = data.gymId;
+
+        if (role === "admin") {
+            if (!selectedGymId) {
+                throw new HttpsError("invalid-argument", "Admin için gymId zorunludur.");
+            }
+
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(uid).get();
+            if (!adminDoc.exists) {
+                throw new HttpsError("not-found", "Admin kaydı bulunamadı.");
+            }
+
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!adminGymIds.includes(selectedGymId)) {
+                throw new HttpsError("permission-denied", "Bu spor salonuna erişim yetkiniz yok.");
+            }
+        }
 
         const notificationsRef = db
             .collection(ownerCollection)
             .doc(uid)
             .collection(COLLECTIONS.NOTIFICATIONS);
 
+        const listQuery = role === "admin"
+            ? notificationsRef
+                .where("gymId", "==", selectedGymId)
+                .orderBy("createdAt", "desc")
+                .limit(limit)
+            : notificationsRef
+                .orderBy("createdAt", "desc")
+                .limit(limit);
+
+        const unreadQuery = role === "admin"
+            ? notificationsRef
+                .where("gymId", "==", selectedGymId)
+                .where("isRead", "==", false)
+            : notificationsRef.where("isRead", "==", false);
+
         const [listSnapshot, unreadSnapshot] = await Promise.all([
-            notificationsRef.orderBy("createdAt", "desc").limit(limit).get(),
-            notificationsRef.where("isRead", "==", false).get()
+            listQuery.get(),
+            unreadQuery.get()
         ]);
 
         const notifications = listSnapshot.docs.map((doc) => doc.data());
