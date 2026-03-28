@@ -30,7 +30,8 @@ export const sendNotification = async (
 
         if (entries.length === 0) return;
 
-        const allTokens = entries.map(e => e.token);
+        // Aynı cihaza birden fazla bildirim gitmesini engelle
+        const allTokens = [...new Set(entries.map(e => e.token))];
 
         // 2. FCM limiti: max 500 token/istek
         const chunks: string[][] = [];
