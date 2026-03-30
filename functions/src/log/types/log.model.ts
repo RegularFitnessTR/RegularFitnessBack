@@ -24,6 +24,7 @@ export interface LogTargetEntity {
  */
 export interface ActivityLog {
     id: string;
+    title?: string;
     action: LogAction;
     category: LogCategory;
     performedBy: LogPerformer;

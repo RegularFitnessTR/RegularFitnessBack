@@ -3,6 +3,7 @@ import { db, COLLECTIONS } from "../../common";
 import { UserRole } from "../../common/types/base";
 import { LogAction, LogCategory } from "../types/log.enums";
 import { ActivityLog, LogTargetEntity } from "../types/log.model";
+import { resolveLogTitle } from "./logPresentation";
 
 /**
  * Parameters for logging an activity
@@ -32,6 +33,7 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
 
         const logEntry: ActivityLog = {
             id: logId,
+            title: resolveLogTitle({ action: params.action }),
             action: params.action,
             category: params.category,
             performedBy: params.performedBy,

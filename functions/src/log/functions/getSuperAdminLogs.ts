@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { GetLogsData } from "../types/log.dto";
 import { ActivityLog } from "../types/log.model";
 import { logError } from "../utils/logError";
+import { mapLogForResponse } from "../utils/logPresentation";
 
 export const getSuperAdminLogs = onCall(async (request) => {
     // 1. Auth kontrolü
@@ -16,13 +17,18 @@ export const getSuperAdminLogs = onCall(async (request) => {
         throw new HttpsError('permission-denied', 'Bu işlem için SuperAdmin yetkisi gereklidir.');
     }
 
-    const data = request.data as GetLogsData;
+    const data = (request.data ?? {}) as GetLogsData;
 
     try {
         const limit = Math.min(data.limit || 50, 200);
 
         let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACTIVITY_LOGS)
             .orderBy('timestamp', 'desc');
+
+        // Gym filtresi
+        if (data.gymId) {
+            query = query.where('gymId', '==', data.gymId);
+        }
 
         // Kategori filtresi
         if (data.category) {
@@ -58,13 +64,14 @@ export const getSuperAdminLogs = onCall(async (request) => {
         const snapshot = await query.get();
 
         const logs: ActivityLog[] = snapshot.docs.map(doc => doc.data() as ActivityLog);
+        const formattedLogs = logs.map(mapLogForResponse);
 
         return {
             success: true,
-            logs: logs,
-            count: logs.length,
-            hasMore: logs.length === limit,
-            lastDocId: logs.length > 0 ? logs[logs.length - 1].id : null
+            logs: formattedLogs,
+            count: formattedLogs.length,
+            hasMore: formattedLogs.length === limit,
+            lastDocId: formattedLogs.length > 0 ? formattedLogs[formattedLogs.length - 1].id : null
         };
 
     } catch (error: any) {

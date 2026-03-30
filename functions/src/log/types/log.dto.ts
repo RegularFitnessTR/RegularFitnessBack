@@ -12,6 +12,8 @@ export interface GetLogsData {
     category?: LogCategory;
     /** Filter by action */
     action?: LogAction;
+    /** Filter by gymId (admin için zorunlu, superadmin için opsiyonel) */
+    gymId?: string;
     /** Filter by date range - start */
     startDate?: string; // ISO date string
     /** Filter by date range - end */

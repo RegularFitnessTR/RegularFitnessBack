@@ -6,6 +6,7 @@ export * from './types/log.dto';
 // Utils
 export * from './utils/logActivity';
 export * from './utils/logError';
+export * from './utils/logPresentation';
 
 // Functions
 export * from './functions/getSuperAdminLogs';

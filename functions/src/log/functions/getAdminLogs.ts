@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { GetLogsData } from "../types/log.dto";
 import { ActivityLog } from "../types/log.model";
 import { logError } from "../utils/logError";
+import { mapLogForResponse } from "../utils/logPresentation";
 
 export const getAdminLogs = onCall(async (request) => {
     // 1. Auth kontrolü
@@ -17,7 +18,12 @@ export const getAdminLogs = onCall(async (request) => {
         throw new HttpsError('permission-denied', 'Bu işlem için Admin yetkisi gereklidir.');
     }
 
-    const data = request.data as GetLogsData;
+    const data = (request.data ?? {}) as GetLogsData;
+    const selectedGymId = data.gymId;
+
+    if (!selectedGymId) {
+        throw new HttpsError('invalid-argument', 'Admin için gymId zorunludur.');
+    }
 
     try {
         // 3. Admin'in gym'lerini al
@@ -28,7 +34,9 @@ export const getAdminLogs = onCall(async (request) => {
         }
 
         const adminData = adminDoc.data();
-        const gymIds: string[] = adminData?.gymIds || [];
+        const legacyGymId = typeof adminData?.gymId === 'string' ? adminData.gymId : undefined;
+        const gymIdsFromArray = Array.isArray(adminData?.gymIds) ? adminData.gymIds : [];
+        const gymIds: string[] = [...new Set([...(legacyGymId ? [legacyGymId] : []), ...gymIdsFromArray])];
 
         if (gymIds.length === 0) {
             return {
@@ -40,14 +48,14 @@ export const getAdminLogs = onCall(async (request) => {
             };
         }
 
+        if (!gymIds.includes(selectedGymId)) {
+            throw new HttpsError('permission-denied', 'Bu spor salonuna ait logları görüntüleme yetkiniz yok.');
+        }
+
         const limit = Math.min(data.limit || 50, 200);
 
-        // Firestore 'in' sorgusu en fazla 30 değer destekler
-        // gymIds 30'dan fazla olabilir, bu durumda ilk 30'u alıyoruz
-        const queryGymIds = gymIds.slice(0, 30);
-
         let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ACTIVITY_LOGS)
-            .where('gymId', 'in', queryGymIds)
+            .where('gymId', '==', selectedGymId)
             .orderBy('timestamp', 'desc');
 
         // Kategori filtresi
@@ -84,13 +92,14 @@ export const getAdminLogs = onCall(async (request) => {
         const snapshot = await query.get();
 
         const logs: ActivityLog[] = snapshot.docs.map(doc => doc.data() as ActivityLog);
+        const formattedLogs = logs.map(mapLogForResponse);
 
         return {
             success: true,
-            logs: logs,
-            count: logs.length,
-            hasMore: logs.length === limit,
-            lastDocId: logs.length > 0 ? logs[logs.length - 1].id : null
+            logs: formattedLogs,
+            count: formattedLogs.length,
+            hasMore: formattedLogs.length === limit,
+            lastDocId: formattedLogs.length > 0 ? formattedLogs[formattedLogs.length - 1].id : null
         };
 
     } catch (error: any) {

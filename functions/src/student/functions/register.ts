@@ -51,6 +51,7 @@ export const registerStudent = onCall(async (request) => {
 
     // Gym public ID verilmişse, gym'i doğrula
     let resolvedGymId = "";
+    let resolvedGymName = "";
     if (data.gymPublicId) {
         const gymSnapshot = await db.collection(COLLECTIONS.GYMS)
             .where('publicId', '==', data.gymPublicId)
@@ -65,6 +66,7 @@ export const registerStudent = onCall(async (request) => {
         }
 
         resolvedGymId = gymSnapshot.docs[0].id;
+        resolvedGymName = gymSnapshot.docs[0].data()?.name || "";
     }
 
     try {
@@ -100,25 +102,29 @@ export const registerStudent = onCall(async (request) => {
 
         await db.collection(COLLECTIONS.STUDENTS).doc(userRecord.uid).set(newStudent);
 
-        // Log kaydı
-        await logActivity({
-            action: LogAction.REGISTER_STUDENT,
-            category: LogCategory.STUDENT,
-            performedBy: {
-                uid: userRecord.uid,
-                role: 'student',
-                name: `${data.firstName} ${data.lastName}`
-            },
-            targetEntity: {
-                id: userRecord.uid,
-                type: 'student',
-                name: `${data.firstName} ${data.lastName}`
-            },
-            details: {
-                email: data.email,
-                ...(resolvedGymId ? { gymId: resolvedGymId } : {})
-            }
-        });
+        // Öğrenci ancak bir gym'e bağlı ise loglanır.
+        if (resolvedGymId) {
+            await logActivity({
+                action: LogAction.JOIN_GYM,
+                category: LogCategory.STUDENT,
+                performedBy: {
+                    uid: userRecord.uid,
+                    role: 'student',
+                    name: `${data.firstName} ${data.lastName}`
+                },
+                targetEntity: {
+                    id: resolvedGymId,
+                    type: 'gym',
+                    name: resolvedGymName
+                },
+                gymId: resolvedGymId,
+                details: {
+                    source: 'register',
+                    studentId: userRecord.uid,
+                    email: data.email
+                }
+            });
+        }
 
         return {
             success: true,

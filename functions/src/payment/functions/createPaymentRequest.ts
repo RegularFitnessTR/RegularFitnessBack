@@ -42,6 +42,10 @@ export const createPaymentRequest = onCall(async (request) => {
         const subscription = subscriptionDoc.data();
         const gymId = subscription?.gymId;
 
+        if (!gymId) {
+            throw new HttpsError('failed-precondition', 'Aboneliğe bağlı spor salonu bilgisi eksik.');
+        }
+
         const paymentRef = db.collection(COLLECTIONS.PAYMENT_REQUESTS).doc();
         const paymentId = paymentRef.id;
 
@@ -122,7 +126,7 @@ export const createPaymentRequest = onCall(async (request) => {
         await paymentRef.set(newPaymentRequest);
         const [coachSnap, adminSnap] = await Promise.all([
             db.collection(COLLECTIONS.COACHES).where("gymId", "==", gymId).get(),
-            db.collection(COLLECTIONS.ADMINS).where("gymId", "==", gymId).get()
+            db.collection(COLLECTIONS.ADMINS).where("gymIds", "array-contains", gymId).get()
         ]);
 
         const coachIds = coachSnap.docs.map(d => d.id);
