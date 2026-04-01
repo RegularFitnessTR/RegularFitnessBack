@@ -65,8 +65,8 @@ export const useSession = onCall(async (request) => {
 
         const newSessionsUsed = packageSub.sessionsUsed + 1;
         const newSessionsRemaining = packageSub.sessionsRemaining - 1;
-        const newTotalDebt = newSessionsUsed * packageSub.pricePerSession;
-        const newBalance = packageSub.totalPaid - newTotalDebt;
+        const totalPackageDebt = packageSub.totalSessions * packageSub.pricePerSession;
+        const currentBalance = packageSub.totalPaid - totalPackageDebt;
 
         const newStatus = newSessionsRemaining === 0
             ? SubscriptionStatus.EXPIRED
@@ -77,8 +77,8 @@ export const useSession = onCall(async (request) => {
         batch.update(subscriptionDoc.ref, {
             sessionsUsed: newSessionsUsed,
             sessionsRemaining: newSessionsRemaining,
-            totalDebt: newTotalDebt,
-            currentBalance: newBalance,
+            totalDebt: totalPackageDebt,
+            currentBalance,
             status: newStatus,
             updatedAt: admin.firestore.Timestamp.now()
         });
@@ -114,7 +114,7 @@ export const useSession = onCall(async (request) => {
             message: 'Ders kullanımı kaydedildi.',
             sessionsUsed: newSessionsUsed,
             sessionsRemaining: newSessionsRemaining,
-            currentBalance: newBalance
+            currentBalance
         };
 
     } catch (error: any) {

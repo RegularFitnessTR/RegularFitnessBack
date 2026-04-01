@@ -63,17 +63,31 @@ export const approvePayment = onCall(async (request) => {
         if (payment.type === PaymentMethodType.PACKAGE) {
             // Package-based: Update debt tracking
             const subscription = subscriptionDoc.data() as PackageSubscription;
-
-            // Prevent overpayment
-            const remainingDebt = subscription.totalDebt - subscription.totalPaid;
-            if (payment.totalAmount > remainingDebt) {
-                throw new HttpsError('failed-precondition', `Ödeme tutarı (${payment.totalAmount}₺) kalan borçtan (${remainingDebt}₺) fazla. Bu ödeme onaylanamaz.`);
+            if (subscription.pricePerSession <= 0 || subscription.totalSessions <= 0) {
+                throw new HttpsError('failed-precondition', 'Paket bilgileri geçersiz olduğu için ödeme onaylanamıyor.');
             }
 
+            const expectedAmount = payment.sessionCount * subscription.pricePerSession;
+            if (payment.totalAmount !== expectedAmount) {
+                throw new HttpsError('failed-precondition', 'Ödeme talebi tutarı paket fiyatı ile uyuşmuyor.');
+            }
+
+            const paidSessionCount = Math.floor(subscription.totalPaid / subscription.pricePerSession);
+            const remainingPayableSessions = Math.max(0, subscription.totalSessions - paidSessionCount);
+            if (payment.sessionCount > remainingPayableSessions) {
+                throw new HttpsError(
+                    'failed-precondition',
+                    `Ödeme talebi kalan ödenebilir ders hakkını aşıyor. En fazla ${remainingPayableSessions} ders ödenebilir.`
+                );
+            }
+
+            const totalPackageDebt = subscription.totalSessions * subscription.pricePerSession;
+
             const newTotalPaid = subscription.totalPaid + payment.totalAmount;
-            const newCurrentBalance = newTotalPaid - subscription.totalDebt;
+            const newCurrentBalance = newTotalPaid - totalPackageDebt;
 
             batch.update(subscriptionDoc.ref, {
+                totalDebt: totalPackageDebt,
                 totalPaid: newTotalPaid,
                 currentBalance: newCurrentBalance,
                 updatedAt: admin.firestore.Timestamp.now()

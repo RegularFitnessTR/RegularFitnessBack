@@ -65,8 +65,8 @@ export const completeAppointment = onCall(async (request) => {
             const now = admin.firestore.Timestamp.now();
             const newSessionsUsed = sub.sessionsUsed + 1;
             const newSessionsRemaining = sub.sessionsRemaining - 1;
-            const newTotalDebt = newSessionsUsed * sub.pricePerSession;
-            const newBalance = sub.totalPaid - newTotalDebt;
+            const totalPackageDebt = sub.totalSessions * sub.pricePerSession;
+            const currentBalance = sub.totalPaid - totalPackageDebt;
 
             // Paket bittiyse aboneliği expired yap
             const newStatus = newSessionsRemaining === 0
@@ -84,8 +84,8 @@ export const completeAppointment = onCall(async (request) => {
             transaction.update(subRef, {
                 sessionsUsed: newSessionsUsed,
                 sessionsRemaining: newSessionsRemaining,
-                totalDebt: newTotalDebt,
-                currentBalance: newBalance,
+                totalDebt: totalPackageDebt,
+                currentBalance,
                 status: newStatus,
                 updatedAt: now
             });

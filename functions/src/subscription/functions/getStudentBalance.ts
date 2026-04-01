@@ -42,16 +42,19 @@ export const getStudentBalance = onCall(async (request) => {
 
         if (sub.type === PaymentMethodType.PACKAGE) {
             const packageSub = sub as PackageSubscription;
+            const totalDebt = packageSub.totalSessions * packageSub.pricePerSession;
+            const currentBalance = packageSub.totalPaid - totalDebt;
+            const remainingDebt = Math.max(0, totalDebt - packageSub.totalPaid);
 
             return {
                 success: true,
                 hasSubscription: true,
                 type: PaymentMethodType.PACKAGE,
                 balance: {
-                    totalDebt: packageSub.totalDebt,
+                    totalDebt,
                     totalPaid: packageSub.totalPaid,
-                    currentBalance: packageSub.currentBalance,   // negatif = borç
-                    remainingDebt: packageSub.totalDebt - packageSub.totalPaid,
+                    currentBalance,   // negatif = borç
+                    remainingDebt,
                     sessionsUsed: packageSub.sessionsUsed,
                     sessionsRemaining: packageSub.sessionsRemaining,
                     totalSessions: packageSub.totalSessions,

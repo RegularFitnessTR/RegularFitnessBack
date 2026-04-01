@@ -59,21 +59,25 @@ export const createPaymentRequest = onCall(async (request) => {
             }
 
             const sessionCount = data.sessionCount;
-            if (sessionCount < 1) {
+            if (!Number.isInteger(sessionCount) || sessionCount < 1) {
                 throw new HttpsError('invalid-argument', 'En az 1 ders için ödeme yapmalısınız.');
             }
 
             const packageSub = subscription as PackageSubscription;
+            if (packageSub.pricePerSession <= 0 || packageSub.totalSessions <= 0) {
+                throw new HttpsError('failed-precondition', 'Paket bilgileri geçersiz olduğu için ödeme talebi oluşturulamıyor.');
+            }
 
-            // Check if already paid for all sessions
-            const remainingDebt = packageSub.totalDebt - packageSub.totalPaid;
-            if (remainingDebt <= 0) {
+            // Ödeme limiti completed seanslara göre değil, paket toplam hakkına göre hesaplanır.
+            const paidSessionCount = Math.floor(packageSub.totalPaid / packageSub.pricePerSession);
+            const maxPayableSessions = Math.max(0, packageSub.totalSessions - paidSessionCount);
+
+            if (maxPayableSessions <= 0) {
                 throw new HttpsError('already-exists', 'Bütün paketlerinizi zaten ödediniz ve borcunuz bulunmuyor.');
             }
 
-            // Check if requested sessions exceed remaining unpaid sessions
-            const maxPayableSessions = Math.ceil(remainingDebt / packageSub.pricePerSession);
             if (sessionCount > maxPayableSessions) {
+                const remainingDebt = maxPayableSessions * packageSub.pricePerSession;
                 throw new HttpsError('invalid-argument', `En fazla ${maxPayableSessions} ders için ödeme yapabilirsiniz. Kalan borcunuz: ${remainingDebt}₺`);
             }
 
