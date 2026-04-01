@@ -246,7 +246,7 @@ export const assignSubscription = onCall(async (request) => {
                 totalMonths: selectedPlan.durationMonths,
                 totalAmount: selectedPlan.totalPrice,
                 hasCommitment: selectedPlan.hasCommitment,
-                commitmentEndsAt,
+                ...(commitmentEndsAt ? { commitmentEndsAt } : {}),
                 isCommitmentActive: selectedPlan.hasCommitment,
                 baseMonthlyPrice: basePlan.monthlyPrice,
                 startDate: now,
