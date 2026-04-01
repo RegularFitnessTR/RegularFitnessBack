@@ -8,3 +8,5 @@ export * from './functions/assignSubscription';
 export * from './functions/getStudentSubscription';
 export * from './functions/useSession';
 export * from './functions/getStudentBalance';
+export * from './functions/cancelSubscription';
+

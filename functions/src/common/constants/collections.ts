@@ -16,5 +16,7 @@ export const COLLECTIONS = {
     APPLICATION_FEATURES: 'applicationFeatures',
     ACTIVITY_LOGS: 'activityLogs',
     ERROR_LOGS: 'errorLogs',
-    SESSIONS: 'sessions'
+    SESSIONS: 'sessions',
+    APPOINTMENTS: 'appointments',
+    SYSTEM_EVENTS: 'system_events',
 } as const;

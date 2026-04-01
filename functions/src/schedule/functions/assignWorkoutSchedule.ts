@@ -4,9 +4,11 @@ import { db, COLLECTIONS } from "../../common";
 import { WorkoutSchedule } from "../types/schedule.model";
 import { AssignWorkoutScheduleData } from "../types/schedule.dto";
 import { validateSessions } from "../utils/validation";
+import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const assignWorkoutSchedule = onCall(async (request) => {
     if (!request.auth) {
@@ -14,57 +16,73 @@ export const assignWorkoutSchedule = onCall(async (request) => {
     }
 
     const { role } = request.auth.token;
-    if (role !== 'coach' && role !== 'admin' && role !== 'superadmin') {
-        throw new HttpsError('permission-denied', 'Bu işlem sadece hocalar, adminler ve superadminler tarafından yapılabilir.');
+
+    // Klasik salonda öğrenci de kendi programını oluşturabilir
+    const allowedRoles = ['coach', 'admin', 'superadmin', 'student'];
+    if (!allowedRoles.includes(role)) {
+        throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
     }
 
     const data = request.data as AssignWorkoutScheduleData;
 
     if (!data.studentId) {
-        throw new HttpsError('invalid-argument', 'Öğrenci ID belirtilmesi zorunludur.');
+        throw new HttpsError('invalid-argument', 'Öğrenci ID zorunludur.');
     }
-
     if (!data.programName || data.programName.trim().length === 0) {
-        throw new HttpsError('invalid-argument', 'Program adı belirtilmesi zorunludur.');
+        throw new HttpsError('invalid-argument', 'Program adı zorunludur.');
     }
 
-    // Validate sessions
     const sessionValidation = validateSessions(data.sessions);
     if (!sessionValidation.valid) {
         throw new HttpsError('invalid-argument', sessionValidation.error || 'Geçersiz seans bilgileri.');
     }
 
     try {
-        // Verify student exists
+        // 1. Öğrenciyi getir
         const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(data.studentId).get();
-
         if (!studentDoc.exists) {
             throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
         }
+        const studentData = studentDoc.data()!;
+        const gymId: string = studentData.gymId;
 
-        const studentData = studentDoc.data();
-        const studentGymId = studentData?.gymId;
-
-        if (!studentGymId) {
-            throw new HttpsError('failed-precondition', 'Öğrenci bir spor salonuna atanmamış.');
+        if (!gymId) {
+            throw new HttpsError('failed-precondition', 'Öğrenci bir salona atanmamış.');
         }
 
-        // Authorization check
-        if (role === 'coach') {
-            if (studentData?.coachId !== request.auth.uid) {
-                throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
-            }
-        } else if (role === 'admin') {
+        // 2. Yetki kontrolü
+        if (role === 'coach' && studentData.coachId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+        }
+
+        // Öğrenci sadece kendi programını oluşturabilir
+        if (role === 'student' && data.studentId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Sadece kendi programınızı oluşturabilirsiniz.');
+        }
+
+        if (role === 'admin') {
             const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminData = adminDoc.data();
-            const adminGymIds = adminData?.gymIds || [];
-
-            if (!adminGymIds.includes(studentGymId)) {
-                throw new HttpsError('permission-denied', 'Bu öğrencinin spor salonuna erişim yetkiniz yok.');
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!adminGymIds.includes(gymId)) {
+                throw new HttpsError('permission-denied', 'Bu öğrencinin salonuna erişim yetkiniz yok.');
             }
         }
 
-        // Check if student already has an active schedule
+        // 3. Salon tipini kontrol et — bu fonksiyon sadece klasik (MEMBERSHIP) salon içindir
+        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+        if (!gymDoc.exists) {
+            throw new HttpsError('not-found', 'Spor salonu bulunamadı.');
+        }
+        const gymData = gymDoc.data()!;
+
+        if (gymData.paymentMethod?.type === PaymentMethodType.PACKAGE) {
+            throw new HttpsError(
+                'failed-precondition',
+                'Paket bazlı salonlarda haftalık şablon yerine randevu sistemi kullanılmalıdır.'
+            );
+        }
+
+        // 4. Mevcut aktif program kontrolü
         const existingScheduleQuery = await db.collection(COLLECTIONS.WORKOUT_SCHEDULES)
             .where('studentId', '==', data.studentId)
             .where('isActive', '==', true)
@@ -73,75 +91,63 @@ export const assignWorkoutSchedule = onCall(async (request) => {
         if (!existingScheduleQuery.empty) {
             throw new HttpsError(
                 'already-exists',
-                'Bu öğrenci için zaten aktif bir program bulunmaktadır. Önce mevcut programı silin veya pasif hale getirin.'
+                'Bu öğrencinin zaten aktif bir çalışma programı var. Önce mevcut programı silin veya pasif yapın.'
             );
         }
 
+        // 5. Programı oluştur
         const scheduleRef = db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc();
         const scheduleId = scheduleRef.id;
 
         const newSchedule: WorkoutSchedule = {
             id: scheduleId,
             studentId: data.studentId,
-            coachId: studentData.coachId || '',
-            gymId: studentGymId,
-
+            coachId: studentData.coachId || undefined,
+            gymId,
             programName: data.programName.trim(),
             programType: data.programType,
             intensity: data.intensity,
             goal: data.goal,
-
             sessions: data.sessions,
-
             isActive: true,
-
             createdBy: request.auth.uid,
             createdAt: admin.firestore.Timestamp.now()
         };
 
-        await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(scheduleId).set(newSchedule);
-
-        // Log kaydı
-
+        await scheduleRef.set(newSchedule);
 
         await logActivity({
             action: LogAction.ASSIGN_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {
                 uid: request.auth!.uid,
-                role: 'coach',
-                name: request.auth!.token.name || 'Coach'
+                role: role as UserRole,
+                name: request.auth!.token.name || role
             },
             targetEntity: {
                 id: scheduleId,
                 type: 'schedule',
                 name: data.programName
             },
-            gymId: studentGymId,
+            gymId,
             details: { studentId: data.studentId }
         });
 
         return {
             success: true,
-            message: "Çalışma programı başarıyla atandı.",
-            scheduleId: scheduleId
+            message: 'Çalışma programı başarıyla oluşturuldu.',
+            scheduleId
         };
 
     } catch (error: any) {
-        console.error("Program atama hatası:", error);
-
         await logError({
             functionName: 'assignWorkoutSchedule',
             error,
             userId: request.auth?.uid,
-            userRole: request.auth?.token?.role,
+            userRole: role,
             requestData: { studentId: data.studentId, programName: data.programName }
         });
-
-        if (error instanceof HttpsError) {
-            throw error;
-        }
-
+        if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });

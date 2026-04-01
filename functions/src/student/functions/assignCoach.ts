@@ -49,11 +49,25 @@ export const assignCoach = onCall(async (request) => {
             throw new HttpsError('invalid-argument', 'Okutulan QR kodu bir hocaya ait değil.');
         }
 
-        // 2. Check if student and coach are in the same gym
-        if (studentData.gymId !== coachData.gymId) {
-            throw new HttpsError('permission-denied', 'Sadece kendi spor salonunuzdaki hocalara kayıt olabilirsiniz.');
+        const batch = db.batch();
+
+        batch.update(db.collection(COLLECTIONS.STUDENTS).doc(studentId), {
+            coachId: coachId,
+            updatedAt: admin.firestore.Timestamp.now()
+        });
+
+        // Aktif abonelik varsa coachId'yi güncelle
+        if (studentData.activeSubscriptionId) {
+            batch.update(
+                db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(studentData.activeSubscriptionId),
+                {
+                    coachId: coachId,
+                    updatedAt: admin.firestore.Timestamp.now()
+                }
+            );
         }
 
+        await batch.commit();
         // 3. Update student in students collection
         await db.collection(COLLECTIONS.STUDENTS).doc(studentId).update({
             coachId: coachId,

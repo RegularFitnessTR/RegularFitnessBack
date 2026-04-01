@@ -2,11 +2,16 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { UpdateGymData } from "../types/gym.dto";
-import { PaymentMethodType } from "../types/gym.enums";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
+import {
+    assertGymTypePaymentCompatibility,
+    gymTypeFromPaymentType,
+    normalizeGymType,
+    normalizePaymentMethod
+} from "../utils/paymentValidation";
 
 export const updateGym = onCall(async (request) => {
     // 1. Yetki Kontrolü: İsteği yapan kişi Admin mi?
@@ -53,22 +58,60 @@ export const updateGym = onCall(async (request) => {
             updates.name = data.name;
         }
 
-        if (data.gymType) {
-            updates.gymType = data.gymType;
+        const currentPaymentType = gymData?.paymentMethod?.type;
+        const normalizedGymType = data.gymType ? normalizeGymType(data.gymType) : undefined;
+        const normalizedPaymentMethod = data.paymentMethod ? normalizePaymentMethod(data.paymentMethod) : undefined;
+
+        if (normalizedPaymentMethod) {
+            const nextGymType = normalizedGymType || gymTypeFromPaymentType(normalizedPaymentMethod.type);
+            assertGymTypePaymentCompatibility(nextGymType, normalizedPaymentMethod.type);
+            updates.paymentMethod = normalizedPaymentMethod;
+            updates.gymType = nextGymType;
+        } else if (normalizedGymType) {
+            if (currentPaymentType) {
+                assertGymTypePaymentCompatibility(normalizedGymType, currentPaymentType);
+            }
+            updates.gymType = normalizedGymType;
         }
 
-        if (data.paymentMethod) {
-            // Validate payment method if provided
-            if (data.paymentMethod.type === PaymentMethodType.PACKAGE) {
-                if (!data.paymentMethod.packages || data.paymentMethod.packages.length === 0) {
-                    throw new HttpsError('invalid-argument', 'En az bir paket tanımlanmalıdır.');
+        const nextPaymentType = normalizedPaymentMethod?.type || currentPaymentType;
+        const isPaymentModelSwitch =
+            currentPaymentType &&
+            nextPaymentType &&
+            currentPaymentType !== nextPaymentType;
+
+        if (isPaymentModelSwitch) {
+            let hasPaidStudent = false;
+            let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+
+            while (true) {
+                let query = db.collection(COLLECTIONS.SUBSCRIPTIONS)
+                    .where('gymId', '==', data.gymId)
+                    .limit(200);
+
+                if (lastDoc) {
+                    query = query.startAfter(lastDoc);
                 }
-            } else if (data.paymentMethod.type === PaymentMethodType.MEMBERSHIP) {
-                if (!data.paymentMethod.monthly || !data.paymentMethod.sixMonths || !data.paymentMethod.yearly) {
-                    throw new HttpsError('invalid-argument', 'Tüm üyelik planları tanımlanmalıdır.');
+
+                const snapshot = await query.get();
+                if (snapshot.empty) {
+                    break;
                 }
+
+                if (snapshot.docs.some((doc) => Number(doc.data()?.totalPaid || 0) > 0)) {
+                    hasPaidStudent = true;
+                    break;
+                }
+
+                lastDoc = snapshot.docs[snapshot.docs.length - 1];
             }
-            updates.paymentMethod = data.paymentMethod;
+
+            if (hasPaidStudent) {
+                throw new HttpsError(
+                    'failed-precondition',
+                    'Salonda ödemesi olan öğrenci varken salon tipi/ödeme modeli değiştirilemez.'
+                );
+            }
         }
 
         if (data.amenities) {

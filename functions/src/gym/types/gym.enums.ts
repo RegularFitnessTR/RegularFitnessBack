@@ -9,9 +9,11 @@ export type GymAmenity = string;
 
 /**
  * Gym types
- * Now dynamic strings managed by admins
  */
-export type GymType = string;
+export enum GymType {
+    REFORMER = 'reformer',
+    CLASSIC = 'classic'
+}
 
 /**
  * Payment method types

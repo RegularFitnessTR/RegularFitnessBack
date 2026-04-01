@@ -11,7 +11,13 @@ export * from './functions/deleteGym';
 export * from './functions/getGymDetails';
 export * from './functions/addPackage';
 export * from './functions/updatePackage';
-export * from './functions/updateMembership';
+export * from './functions/updateMembershipPlan';
 export * from './functions/addAmenity';
 export * from './functions/deleteAmenity';
 export * from './functions/deletePackage';
+export * from './functions/deleteGym';
+export * from './functions/deleteAmenity';
+export * from './functions/deleteMembershipPlan';
+export * from './functions/addMembershipPlan';
+export * from './functions/updateMembershipPlan';
+

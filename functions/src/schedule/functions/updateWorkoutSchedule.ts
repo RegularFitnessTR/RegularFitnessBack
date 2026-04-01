@@ -3,9 +3,11 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { UpdateWorkoutScheduleData } from "../types/schedule.dto";
 import { validateSessions } from "../utils/validation";
+import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const updateWorkoutSchedule = onCall(async (request) => {
     if (!request.auth) {
@@ -13,42 +15,53 @@ export const updateWorkoutSchedule = onCall(async (request) => {
     }
 
     const { role } = request.auth.token;
-    if (role !== 'coach' && role !== 'admin' && role !== 'superadmin') {
-        throw new HttpsError('permission-denied', 'Bu işlem sadece hocalar, adminler ve superadminler tarafından yapılabilir.');
+    const allowedRoles = ['coach', 'admin', 'superadmin', 'student'];
+    if (!allowedRoles.includes(role)) {
+        throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
     }
 
     const data = request.data as UpdateWorkoutScheduleData;
-
     if (!data.scheduleId) {
-        throw new HttpsError('invalid-argument', 'Program ID belirtilmesi zorunludur.');
+        throw new HttpsError('invalid-argument', 'Program ID zorunludur.');
     }
 
     try {
         const scheduleDoc = await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(data.scheduleId).get();
-
         if (!scheduleDoc.exists) {
             throw new HttpsError('not-found', 'Program bulunamadı.');
         }
 
-        const schedule = scheduleDoc.data();
-        const scheduleGymId = schedule?.gymId;
+        const schedule = scheduleDoc.data()!;
+        const gymId: string = schedule.gymId;
 
-        // Authorization check
-        if (role === 'coach') {
-            if (schedule?.coachId !== request.auth.uid) {
-                throw new HttpsError('permission-denied', 'Bu programa erişim yetkiniz yok.');
-            }
-        } else if (role === 'admin') {
+        // Salon tipi kontrolü — reformer salonunda haftalık şablon güncellenemez
+        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+        if (gymDoc.data()?.paymentMethod?.type === PaymentMethodType.PACKAGE) {
+            throw new HttpsError(
+                'failed-precondition',
+                'Paket bazlı salonlarda haftalık program yerine randevu sistemi kullanılmaktadır.'
+            );
+        }
+
+        // Yetki kontrolü
+        if (role === 'coach' && schedule.coachId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Bu programa erişim yetkiniz yok.');
+        }
+
+        // Öğrenci sadece kendi programını güncelleyebilir
+        if (role === 'student' && schedule.studentId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Sadece kendi programınızı güncelleyebilirsiniz.');
+        }
+
+        if (role === 'admin') {
             const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminData = adminDoc.data();
-            const adminGymIds = adminData?.gymIds || [];
-
-            if (!scheduleGymId || !adminGymIds.includes(scheduleGymId)) {
-                throw new HttpsError('permission-denied', 'Bu programın spor salonuna erişim yetkiniz yok.');
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!adminGymIds.includes(gymId)) {
+                throw new HttpsError('permission-denied', 'Bu programın salonuna erişim yetkiniz yok.');
             }
         }
 
-        const updates: any = {
+        const updates: Record<string, any> = {
             updatedAt: admin.firestore.Timestamp.now()
         };
 
@@ -59,17 +72,9 @@ export const updateWorkoutSchedule = onCall(async (request) => {
             updates.programName = data.programName.trim();
         }
 
-        if (data.programType !== undefined) {
-            updates.programType = data.programType;
-        }
-
-        if (data.intensity !== undefined) {
-            updates.intensity = data.intensity;
-        }
-
-        if (data.goal !== undefined) {
-            updates.goal = data.goal;
-        }
+        if (data.programType !== undefined) updates.programType = data.programType;
+        if (data.intensity !== undefined) updates.intensity = data.intensity;
+        if (data.goal !== undefined) updates.goal = data.goal;
 
         if (data.sessions !== undefined) {
             const sessionValidation = validateSessions(data.sessions);
@@ -81,46 +86,34 @@ export const updateWorkoutSchedule = onCall(async (request) => {
 
         await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(data.scheduleId).update(updates);
 
-        // Log kaydı
-
-
         await logActivity({
             action: LogAction.UPDATE_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {
                 uid: request.auth!.uid,
-                role: 'coach',
-                name: request.auth!.token.name || 'Coach'
+                role: role as UserRole,
+                name: request.auth!.token.name || role
             },
             targetEntity: {
                 id: data.scheduleId,
                 type: 'schedule',
-                name: schedule?.programName
+                name: schedule.programName
             },
-            gymId: scheduleGymId,
+            gymId,
             details: { updatedFields: Object.keys(updates) }
         });
 
-        return {
-            success: true,
-            message: "Çalışma programı başarıyla güncellendi."
-        };
+        return { success: true, message: 'Çalışma programı başarıyla güncellendi.' };
 
     } catch (error: any) {
-        console.error("Program güncelleme hatası:", error);
-
         await logError({
             functionName: 'updateWorkoutSchedule',
             error,
             userId: request.auth?.uid,
-            userRole: request.auth?.token?.role,
+            userRole: role,
             requestData: data
         });
-
-        if (error instanceof HttpsError) {
-            throw error;
-        }
-
+        if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });

@@ -6,6 +6,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
+import { GymType } from "../../gym/types/gym.enums";
 
 export const deleteGymTypes = onCall(async (request) => {
     if (!request.auth) {
@@ -21,6 +22,10 @@ export const deleteGymTypes = onCall(async (request) => {
 
     if (!data.id) {
         throw new HttpsError('invalid-argument', 'Tip ID\'si zorunludur.');
+    }
+
+    if (data.id === GymType.REFORMER || data.id === GymType.CLASSIC) {
+        throw new HttpsError('failed-precondition', 'Standart salon tipleri silinemez.');
     }
 
     try {

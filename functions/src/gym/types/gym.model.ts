@@ -28,8 +28,8 @@ export interface Gym {
     name: string;
     photoUrl?: string;
     ownerId: string; // Admin UID who created this gym
-    gymType: GymType;              // Type of gym (fitness, swimming, etc.)
-    paymentMethod?: PaymentMethod;  // Package-based or membership-based (optional - can be added later)
+    gymType: GymType;               // reformer | classic
+    paymentMethod?: PaymentMethod;  // package | membership
     amenities: GymAmenity[];
     address: GymAddress;
     phoneNumber: string;

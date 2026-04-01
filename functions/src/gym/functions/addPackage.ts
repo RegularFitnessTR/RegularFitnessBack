@@ -7,6 +7,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
+import { normalizePackage } from "../utils/paymentValidation";
 
 interface AddPackageData {
     gymId: string;
@@ -29,6 +30,8 @@ export const addPackage = onCall(async (request) => {
         throw new HttpsError('invalid-argument', 'Gym ID ve paket bilgileri gereklidir.');
     }
 
+    const normalizedPackage = normalizePackage(data.package);
+
     try {
         const gymRef = db.collection(COLLECTIONS.GYMS).doc(data.gymId);
         const gymDoc = await gymRef.get();
@@ -49,9 +52,17 @@ export const addPackage = onCall(async (request) => {
             throw new HttpsError('failed-precondition', 'Bu spor salonu paket bazlı ödeme yöntemini kullanmıyor.');
         }
 
+        const existingPackages: Package[] = gymData.paymentMethod.packages || [];
+        const duplicate = existingPackages.some(
+            (pkg) => pkg.name.toLowerCase() === normalizedPackage.name.toLowerCase()
+        );
+        if (duplicate) {
+            throw new HttpsError('already-exists', 'Aynı isimde paket zaten mevcut.');
+        }
+
         // 3. Add Package
         await gymRef.update({
-            'paymentMethod.packages': admin.firestore.FieldValue.arrayUnion(data.package),
+            'paymentMethod.packages': admin.firestore.FieldValue.arrayUnion(normalizedPackage),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -70,7 +81,7 @@ export const addPackage = onCall(async (request) => {
                 name: gymData?.name
             },
             gymId: data.gymId,
-            details: { packageName: data.package.name }
+            details: { packageName: normalizedPackage.name }
         });
 
         return { success: true, message: "Paket başarıyla eklendi." };

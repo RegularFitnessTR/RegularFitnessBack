@@ -10,6 +10,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { sendAndStoreNotification } from "../../notification/utils/sendAndStoreNotification";
+import { ensureMonthlyPaymentsUpToMonth } from "../../subscription/utils/membershipPayments";
 
 export const createPaymentRequest = onCall(async (request) => {
     if (!request.auth) {
@@ -92,7 +93,6 @@ export const createPaymentRequest = onCall(async (request) => {
             };
 
         } else {
-            // Membership-based payment
             if (!('monthNumber' in data)) {
                 throw new HttpsError('invalid-argument', 'Ay numarası belirtilmesi zorunludur.');
             }
@@ -100,29 +100,42 @@ export const createPaymentRequest = onCall(async (request) => {
             const monthNumber = data.monthNumber;
             const membershipSub = subscription as MembershipSubscription;
 
-            if (monthNumber < 1 || monthNumber > membershipSub.totalMonths) {
-                throw new HttpsError('invalid-argument', `Geçersiz ay numarası. 1 - ${membershipSub.totalMonths} arası olmalıdır.`);
+            if (!Number.isInteger(monthNumber) || monthNumber < 1) {
+                throw new HttpsError('invalid-argument', 'Ay numarası 1 veya daha büyük bir tam sayı olmalıdır.');
             }
 
-            const monthlyPayment = membershipSub.monthlyPayments[monthNumber - 1];
+            const monthlyPayments = ensureMonthlyPaymentsUpToMonth(membershipSub, monthNumber);
+            const monthlyPayment = monthlyPayments[monthNumber - 1];
+
+            if (!monthlyPayment) {
+                throw new HttpsError('not-found', 'Bu aya ait ödeme kaydı bulunamadı.');
+            }
 
             if (monthlyPayment.status === 'paid') {
                 throw new HttpsError('already-exists', 'Bu ay için ödeme zaten yapılmış.');
             }
 
+            if (monthlyPayments.length !== (membershipSub.monthlyPayments || []).length) {
+                await db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(subscriptionId).update({
+                    monthlyPayments,
+                    updatedAt: admin.firestore.Timestamp.now()
+                });
+            }
+
+            const paymentAmount = monthlyPayment.amount;
+
             newPaymentRequest = {
                 id: paymentId,
-                studentId: studentId,
-                subscriptionId: subscriptionId,
-                gymId: gymId,
+                studentId,
+                subscriptionId,
+                gymId,
                 type: PaymentMethodType.MEMBERSHIP,
-                monthNumber: monthNumber,
-                monthlyAmount: membershipSub.monthlyPayment,
+                monthNumber,
+                monthlyAmount: paymentAmount,
                 status: PaymentStatus.PENDING,
                 createdAt: admin.firestore.Timestamp.now()
             };
         }
-
         await paymentRef.set(newPaymentRequest);
         const [coachSnap, adminSnap] = await Promise.all([
             db.collection(COLLECTIONS.COACHES).where("gymId", "==", gymId).get(),

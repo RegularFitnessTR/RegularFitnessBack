@@ -2,9 +2,11 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { ToggleScheduleStatusData } from "../types/schedule.dto";
+import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
+import { UserRole } from "../../common/types/base";
 
 export const toggleScheduleStatus = onCall(async (request) => {
     if (!request.auth) {
@@ -13,52 +15,58 @@ export const toggleScheduleStatus = onCall(async (request) => {
 
     const { role } = request.auth.token;
     if (role !== 'coach' && role !== 'admin' && role !== 'superadmin') {
-        throw new HttpsError('permission-denied', 'Bu işlem sadece hocalar, adminler ve superadminler tarafından yapılabilir.');
+        throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
     }
 
     const data = request.data as ToggleScheduleStatusData;
 
     if (!data.scheduleId) {
-        throw new HttpsError('invalid-argument', 'Program ID belirtilmesi zorunludur.');
+        throw new HttpsError('invalid-argument', 'Program ID zorunludur.');
     }
-
     if (data.isActive === undefined) {
         throw new HttpsError('invalid-argument', 'Durum belirtilmesi zorunludur.');
     }
 
     try {
         const scheduleDoc = await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(data.scheduleId).get();
-
         if (!scheduleDoc.exists) {
             throw new HttpsError('not-found', 'Program bulunamadı.');
         }
 
-        const schedule = scheduleDoc.data();
-        const scheduleGymId = schedule?.gymId;
+        const schedule = scheduleDoc.data()!;
+        const gymId: string = schedule.gymId;
 
-        // Authorization check
-        if (role === 'coach') {
-            if (schedule?.coachId !== request.auth.uid) {
-                throw new HttpsError('permission-denied', 'Bu programa erişim yetkiniz yok.');
-            }
-        } else if (role === 'admin') {
+        // Reformer salonunda haftalık şablon yok — bu fonksiyon anlamsız
+        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+        if (gymDoc.data()?.paymentMethod?.type === PaymentMethodType.PACKAGE) {
+            throw new HttpsError(
+                'failed-precondition',
+                'Paket bazlı salonlarda haftalık program durumu değiştirilemez.'
+            );
+        }
+
+        // Yetki kontrolü
+        if (role === 'coach' && schedule.coachId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Bu programa erişim yetkiniz yok.');
+        }
+
+        if (role === 'admin') {
             const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminData = adminDoc.data();
-            const adminGymIds = adminData?.gymIds || [];
-
-            if (!scheduleGymId || !adminGymIds.includes(scheduleGymId)) {
-                throw new HttpsError('permission-denied', 'Bu programın spor salonuna erişim yetkiniz yok.');
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!adminGymIds.includes(gymId)) {
+                throw new HttpsError('permission-denied', 'Bu programın salonuna erişim yetkiniz yok.');
             }
         }
 
-        // If activating, check for other active schedules
+        // Aktif yapılıyorsa başka aktif program var mı kontrol et
         if (data.isActive) {
             const existingActive = await db.collection(COLLECTIONS.WORKOUT_SCHEDULES)
-                .where('studentId', '==', schedule?.studentId)
+                .where('studentId', '==', schedule.studentId)
                 .where('isActive', '==', true)
                 .get();
 
-            if (!existingActive.empty && existingActive.docs[0].id !== data.scheduleId) {
+            const alreadyActiveOther = existingActive.docs.some(d => d.id !== data.scheduleId);
+            if (alreadyActiveOther) {
                 throw new HttpsError(
                     'already-exists',
                     'Bu öğrenci için zaten başka bir aktif program bulunmaktadır.'
@@ -71,46 +79,37 @@ export const toggleScheduleStatus = onCall(async (request) => {
             updatedAt: admin.firestore.Timestamp.now()
         });
 
-        // Log kaydı
-
-
         await logActivity({
             action: LogAction.TOGGLE_SCHEDULE_STATUS,
             category: LogCategory.SCHEDULE,
             performedBy: {
                 uid: request.auth!.uid,
-                role: 'coach',
-                name: request.auth!.token.name || 'Coach'
+                role: role as UserRole,    // sabit 'coach' yerine dinamik
+                name: request.auth!.token.name || role
             },
             targetEntity: {
                 id: data.scheduleId,
                 type: 'schedule',
-                name: schedule?.programName
+                name: schedule.programName
             },
-            gymId: scheduleGymId,
+            gymId,
             details: { isActive: data.isActive }
         });
 
         return {
             success: true,
-            message: data.isActive ? "Program aktif hale getirildi." : "Program pasif hale getirildi."
+            message: data.isActive ? 'Program aktif hale getirildi.' : 'Program pasif hale getirildi.'
         };
 
     } catch (error: any) {
-        console.error("Program durum değiştirme hatası:", error);
-
         await logError({
             functionName: 'toggleScheduleStatus',
             error,
             userId: request.auth?.uid,
-            userRole: request.auth?.token?.role,
+            userRole: role,
             requestData: data
         });
-
-        if (error instanceof HttpsError) {
-            throw error;
-        }
-
+        if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });

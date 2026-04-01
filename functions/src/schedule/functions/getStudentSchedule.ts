@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, COLLECTIONS } from "../../common";
+import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
 export const getStudentSchedule = onCall(async (request) => {
@@ -7,65 +8,106 @@ export const getStudentSchedule = onCall(async (request) => {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
     }
 
+    const { role } = request.auth.token;
     const { studentId } = request.data;
 
     if (!studentId) {
-        throw new HttpsError('invalid-argument', 'Öğrenci ID belirtilmesi zorunludur.');
+        throw new HttpsError('invalid-argument', 'Öğrenci ID zorunludur.');
     }
 
     try {
-        const { role } = request.auth.token;
+        // Yetki kontrolü
+        if (role === 'student' && studentId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Başka öğrencinin programını görüntüleyemezsiniz.');
+        }
 
-        // Authorization: Coach (own students), Student (self), or Admin/Superadmin
-        if (role === 'student') {
-            if (studentId !== request.auth.uid) {
-                throw new HttpsError('permission-denied', 'Başka öğrencinin programını görüntüleyemezsiniz.');
-            }
-        } else {
-            const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(studentId).get();
-            const studentData = studentDoc.data();
-            const studentGymId = studentData?.gymId;
+        const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(studentId).get();
+        if (!studentDoc.exists) {
+            throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
+        }
 
-            if (role === 'coach') {
-                if (studentData?.coachId !== request.auth.uid) {
-                    throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
-                }
-            } else if (role === 'admin') {
-                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-                const adminData = adminDoc.data();
-                const adminGymIds = adminData?.gymIds || [];
+        const studentData = studentDoc.data()!;
+        const gymId: string = studentData.gymId;
 
-                if (!studentGymId || !adminGymIds.includes(studentGymId)) {
-                    throw new HttpsError('permission-denied', 'Bu öğrencinin spor salonuna erişim yetkiniz yok.');
-                }
-            } else if (role !== 'superadmin') {
-                throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
+        if (role === 'coach' && studentData.coachId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+        }
+
+        if (role === 'admin') {
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!gymId || !adminGymIds.includes(gymId)) {
+                throw new HttpsError('permission-denied', 'Bu öğrencinin salonuna erişim yetkiniz yok.');
             }
         }
 
-        // Get active schedule
-        const snapshot = await db.collection(COLLECTIONS.WORKOUT_SCHEDULES)
-            .where('studentId', '==', studentId)
-            .where('isActive', '==', true)
-            .limit(1)
-            .get();
+        // Salon tipini belirle
+        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+        const gymType = gymDoc.data()?.paymentMethod?.type;
 
-        if (snapshot.empty) {
+        // A TİPİ: Reformer / Paket bazlı → Appointment listesi döndür
+        if (gymType === PaymentMethodType.PACKAGE) {
+            const activeSubscriptionId = studentData.activeSubscriptionId;
+
+            if (!activeSubscriptionId) {
+                return {
+                    success: true,
+                    scheduleType: 'fixed_dates',
+                    appointments: [],
+                    message: 'Aktif paket aboneliği yok.'
+                };
+            }
+
+            // Tüm durumları getir, frontend filtrelesin
+            const appointmentsQuery = await db.collection(COLLECTIONS.APPOINTMENTS)
+                .where('subscriptionId', '==', activeSubscriptionId)
+                .orderBy('sessionNumber', 'asc')
+                .get();
+
+            const appointments = appointmentsQuery.docs.map(d => d.data());
+
+            // Özet bilgileri hesapla
+            const pending = appointments.filter(a => a.status === 'pending').length;
+            const completed = appointments.filter(a => a.status === 'completed').length;
+            const cancelled = appointments.filter(a => a.status === 'cancelled').length;
+
             return {
                 success: true,
-                schedule: null,
-                message: "Henüz aktif çalışma programı bulunmuyor."
+                scheduleType: 'fixed_dates',
+                appointments,
+                summary: {
+                    total: appointments.length,
+                    pending,
+                    completed,
+                    cancelled
+                }
+            };
+
+            // B TİPİ: Klasik / Üyelik bazlı → WorkoutSchedule döndür
+        } else {
+            const scheduleQuery = await db.collection(COLLECTIONS.WORKOUT_SCHEDULES)
+                .where('studentId', '==', studentId)
+                .where('isActive', '==', true)
+                .limit(1)
+                .get();
+
+            if (scheduleQuery.empty) {
+                return {
+                    success: true,
+                    scheduleType: 'weekly_recurring',
+                    schedule: null,
+                    message: 'Aktif haftalık program yok.'
+                };
+            }
+
+            return {
+                success: true,
+                scheduleType: 'weekly_recurring',
+                schedule: scheduleQuery.docs[0].data()
             };
         }
 
-        return {
-            success: true,
-            schedule: snapshot.docs[0].data()
-        };
-
     } catch (error: any) {
-        console.error("Program getirme hatası:", error);
-
         await logError({
             functionName: 'getStudentSchedule',
             error,
@@ -73,11 +115,7 @@ export const getStudentSchedule = onCall(async (request) => {
             userRole: request.auth?.token?.role,
             requestData: { studentId }
         });
-
-        if (error instanceof HttpsError) {
-            throw error;
-        }
-
+        if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });

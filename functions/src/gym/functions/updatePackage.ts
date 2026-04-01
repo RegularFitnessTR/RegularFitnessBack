@@ -7,6 +7,7 @@ import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
+import { normalizePackage } from "../utils/paymentValidation";
 
 interface UpdatePackageData {
     gymId: string;
@@ -28,6 +29,8 @@ export const updatePackage = onCall(async (request) => {
     if (!data.gymId || data.packageIndex === undefined || !data.package) {
         throw new HttpsError('invalid-argument', 'Gym ID, paket indexi ve yeni paket bilgileri gereklidir.');
     }
+
+    const normalizedPackage = normalizePackage(data.package);
 
     try {
         const gymRef = db.collection(COLLECTIONS.GYMS).doc(data.gymId);
@@ -52,8 +55,17 @@ export const updatePackage = onCall(async (request) => {
                 throw new HttpsError('out-of-range', 'Geçersiz paket indexi.');
             }
 
+            const duplicate = packages.some(
+                (pkg: Package, index: number) =>
+                    index !== data.packageIndex &&
+                    pkg.name.toLowerCase() === normalizedPackage.name.toLowerCase()
+            );
+            if (duplicate) {
+                throw new HttpsError('already-exists', 'Aynı isimde başka bir paket mevcut.');
+            }
+
             // Update the package, ensuring we keep the array structure
-            packages[data.packageIndex] = data.package;
+            packages[data.packageIndex] = normalizedPackage;
 
             transaction.update(gymRef, {
                 'paymentMethod.packages': packages,
@@ -75,7 +87,7 @@ export const updatePackage = onCall(async (request) => {
                 type: 'gym'
             },
             gymId: data.gymId,
-            details: { packageIndex: data.packageIndex, packageName: data.package.name }
+            details: { packageIndex: data.packageIndex, packageName: normalizedPackage.name }
         });
 
         return { success: true, message: "Paket başarıyla güncellendi." };

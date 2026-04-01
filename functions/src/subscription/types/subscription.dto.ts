@@ -13,10 +13,8 @@ export interface AssignPackageSubscriptionData {
  */
 export interface AssignMembershipSubscriptionData {
     studentId: string;
-    membershipType: 'monthly' | 'sixMonths' | 'yearly';
-    membershipName: string;
-    monthlyPayment: number;
-    totalMonths: number;
+    planId: string;
+    billingDayOfMonth: number;
 }
 
 /**

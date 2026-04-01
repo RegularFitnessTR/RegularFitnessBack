@@ -11,6 +11,7 @@ import { LogAction, LogCategory } from "../../log/types/log.enums";
 import { UserRole } from "../../common/types/base";
 import { PackageSubscription, MembershipSubscription } from "../../subscription/types/subscription.model";
 import { sendAndStoreNotification } from "../../notification/utils/sendAndStoreNotification";
+import { ensureMonthlyPaymentsUpToMonth } from "../../subscription/utils/membershipPayments";
 
 export const approvePayment = onCall(async (request) => {
     if (!request.auth) {
@@ -79,29 +80,44 @@ export const approvePayment = onCall(async (request) => {
             });
 
         } else {
-            // Membership-based: Mark month as paid
             const subscription = subscriptionDoc.data() as MembershipSubscription;
 
             const monthIndex = payment.monthNumber - 1;
-            const monthlyPayments = [...subscription.monthlyPayments];
+            const monthlyPayments = ensureMonthlyPaymentsUpToMonth(subscription, payment.monthNumber);
+
+            if (!monthlyPayments[monthIndex]) {
+                throw new HttpsError('not-found', 'Bu aya ait ödeme kaydı bulunamadı.');
+            }
+            if (monthlyPayments[monthIndex].status === 'paid') {
+                throw new HttpsError('already-exists', 'Bu ay için ödeme zaten onaylanmış.');
+            }
+
+            const now = admin.firestore.Timestamp.now();
+
             monthlyPayments[monthIndex] = {
                 ...monthlyPayments[monthIndex],
                 status: 'paid',
-                paidDate: admin.firestore.Timestamp.now(),
+                paidDate: now,
                 paymentRequestId: data.paymentRequestId
             };
 
             const newTotalPaid = subscription.totalPaid + payment.monthlyAmount;
-            const newCurrentBalance = subscription.totalAmount - newTotalPaid;
+
+            // Taahhüt aktifse toplam taahhüt tutarına, değilse o ana kadar birikmiş
+            // ödeme miktarına göre bakiye hesapla
+            const totalExpected = subscription.isCommitmentActive
+                ? subscription.totalAmount                          // taahhüt süresi toplam borcu
+                : subscription.totalPaid + payment.monthlyAmount;  // açık uçlu: sadece ödenenler
+
+            const newCurrentBalance = newTotalPaid - totalExpected;
 
             batch.update(subscriptionDoc.ref, {
-                monthlyPayments: monthlyPayments,
+                monthlyPayments,
                 totalPaid: newTotalPaid,
-                currentBalance: -newCurrentBalance,
-                updatedAt: admin.firestore.Timestamp.now()
+                currentBalance: newCurrentBalance,
+                updatedAt: now
             });
         }
-
         batch.update(paymentDoc.ref, {
             status: PaymentStatus.APPROVED,
             processedAt: admin.firestore.Timestamp.now(),

@@ -3,12 +3,12 @@ import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription } from "../types/subscription.model";
+import { SubscriptionStatus } from "../types/subscription.enums";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
 
 export const useSession = onCall(async (request) => {
-    // Only student can use sessions
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
     }
@@ -21,58 +21,76 @@ export const useSession = onCall(async (request) => {
     const studentId = request.auth.uid;
 
     try {
-        // Get student's active subscription
         const studentDoc = await db.collection(COLLECTIONS.STUDENTS).doc(studentId).get();
-        const studentData = studentDoc.data();
-        const subscriptionId = studentData?.activeSubscriptionId;
+        if (!studentDoc.exists) {
+            throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
+        }
+        const studentData = studentDoc.data()!;
+        const subscriptionId = studentData.activeSubscriptionId;
 
         if (!subscriptionId) {
             throw new HttpsError('failed-precondition', 'Aktif aboneliğiniz bulunmuyor.');
         }
 
-        // Get subscription
         const subscriptionDoc = await db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(subscriptionId).get();
-
         if (!subscriptionDoc.exists) {
             throw new HttpsError('not-found', 'Abonelik bulunamadı.');
         }
 
         const subscription = subscriptionDoc.data();
 
-        // Only package subscriptions use sessions
         if (subscription?.type !== PaymentMethodType.PACKAGE) {
             throw new HttpsError('invalid-argument', 'Bu abonelik paket bazlı değil.');
         }
 
+        // Salon tipini kontrol et — reformer salonunda bu fonksiyon kullanılamaz,
+        // seans düşürme sadece completeAppointment üzerinden yapılır
+        const gymId: string | undefined = subscription.gymId;
+        if (gymId) {
+            const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+            const gymData = gymDoc.data();
+            if (gymData?.paymentMethod?.type === PaymentMethodType.PACKAGE) {
+                throw new HttpsError(
+                    'failed-precondition',
+                    'Bu salon randevu sistemi kullanıyor. Seans düşürme işlemi hoca tarafından randevu tamamlama üzerinden yapılmalıdır.'
+                );
+            }
+        }
+
         const packageSub = subscription as PackageSubscription;
 
-        // Check if sessions are available
-        if (packageSub.sessionsUsed >= packageSub.totalSessions) {
+        if (packageSub.sessionsRemaining <= 0) {
             throw new HttpsError('resource-exhausted', 'Paket dersleri tamamlandı. Yeni paket ataması gerekiyor.');
         }
 
-        // Update subscription - only track usage, debt is already set
         const newSessionsUsed = packageSub.sessionsUsed + 1;
-        const newSessionsRemaining = packageSub.totalSessions - newSessionsUsed;
+        const newSessionsRemaining = packageSub.sessionsRemaining - 1;
+        const newTotalDebt = newSessionsUsed * packageSub.pricePerSession;
+        const newBalance = packageSub.totalPaid - newTotalDebt;
 
-        // currentBalance stays the same (totalPaid - totalDebt)
-        // No need to recalculate since totalDebt is fixed at package assignment
+        const newStatus = newSessionsRemaining === 0
+            ? SubscriptionStatus.EXPIRED
+            : SubscriptionStatus.ACTIVE;
 
-        await db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(subscriptionId).update({
+        const batch = db.batch();
+
+        batch.update(subscriptionDoc.ref, {
             sessionsUsed: newSessionsUsed,
             sessionsRemaining: newSessionsRemaining,
+            totalDebt: newTotalDebt,
+            currentBalance: newBalance,
+            status: newStatus,
             updatedAt: admin.firestore.Timestamp.now()
         });
 
-        // Calculate current balance for response
-        const currentBalance = packageSub.totalPaid - packageSub.totalDebt;
-
-        // Log kaydı - gymId'yi coach üzerinden bul
-        let gymId: string | undefined;
-        if (studentData?.coachId) {
-            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(studentData.coachId).get();
-            gymId = coachDoc.data()?.gymId;
+        if (newStatus === SubscriptionStatus.EXPIRED) {
+            batch.update(
+                db.collection(COLLECTIONS.STUDENTS).doc(studentId),
+                { activeSubscriptionId: null, updatedAt: admin.firestore.Timestamp.now() }
+            );
         }
+
+        await batch.commit();
 
         await logActivity({
             action: LogAction.USE_SESSION,
@@ -85,34 +103,28 @@ export const useSession = onCall(async (request) => {
             targetEntity: {
                 id: subscriptionId,
                 type: 'subscription',
-                name: `Ders Kullanımı`
+                name: 'Ders Kullanımı'
             },
-            gymId: gymId,
+            gymId,
             details: { sessionsUsed: newSessionsUsed, sessionsRemaining: newSessionsRemaining }
         });
 
         return {
             success: true,
-            message: "Ders kullanımı kaydedildi.",
+            message: 'Ders kullanımı kaydedildi.',
             sessionsUsed: newSessionsUsed,
             sessionsRemaining: newSessionsRemaining,
-            currentBalance: currentBalance
+            currentBalance: newBalance
         };
 
     } catch (error: any) {
-        console.error("Ders kullanımı hatası:", error);
-
         await logError({
             functionName: 'useSession',
             error,
             userId: request.auth?.uid,
-            userRole: request.auth?.token?.role
+            userRole: role
         });
-
-        if (error instanceof HttpsError) {
-            throw error;
-        }
-
+        if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
     }
 });
