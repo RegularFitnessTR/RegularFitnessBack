@@ -76,9 +76,9 @@ export const gymCheckIn = onCall(async (request) => {
             userRole: role as 'student' | 'coach',
             firstName: user.firstName,
             lastName: user.lastName,
-            photoUrl: user.photoUrl || undefined,
             checkedInAt: now,
             isActive: true,
+            ...(user.photoUrl ? { photoUrl: user.photoUrl } : {}),
         };
 
         await presenceRef.set(presenceRecord);
