@@ -10,7 +10,7 @@ import { assignSubscription, getStudentSubscription, useSession, getStudentBalan
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
 import { createMeasurement, getMeasurements, getLatestMeasurement } from "./measurement";
 import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
-import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, getStudentSchedule, toggleScheduleStatus, createAppointments, completeAppointment, postponeAppointment, cancelAppointment, checkCommitmentExpiry, checkSubscriptionExpiry, getCoachSchedules } from "./schedule";
+import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, getStudentSchedule, toggleScheduleStatus, createAppointments, updateAppointmentsPlan, deleteAppointmentsPlan, completeAppointment, postponeAppointment, cancelAppointment, checkCommitmentExpiry, checkSubscriptionExpiry, getCoachSchedules } from "./schedule";
 import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes } from "./applicationFeatures";
 import { getSuperAdminLogs, getAdminLogs, getSuperAdminErrorLogs } from "./log";
 import { resetPassword } from "./auth";
@@ -77,6 +77,8 @@ export {
     getCoachSchedules,
     toggleScheduleStatus,
     createAppointments,
+    updateAppointmentsPlan,
+    deleteAppointmentsPlan,
     completeAppointment,
     postponeAppointment,
     cancelAppointment,

@@ -11,6 +11,8 @@ export * from './functions/getStudentSchedule';
 export * from './functions/getCoachSchedules';
 export * from './functions/toggleScheduleStatus';
 export * from './functions/createAppointments';
+export * from './functions/updateAppointmentsPlan';
+export * from './functions/deleteAppointmentsPlan';
 export * from './functions/postponeAppointment';
 export * from './functions/completeAppointment';
 export * from './functions/cancelAppointment';
