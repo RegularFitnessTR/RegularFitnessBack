@@ -19,4 +19,5 @@ export const COLLECTIONS = {
     SESSIONS: 'sessions',
     APPOINTMENTS: 'appointments',
     SYSTEM_EVENTS: 'system_events',
+    GYM_PRESENCE: 'gymPresence',
 } as const;

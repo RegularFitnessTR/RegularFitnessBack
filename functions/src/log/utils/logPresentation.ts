@@ -50,7 +50,10 @@ const LOG_TITLE_BY_ACTION: Record<LogAction, string> = {
     [LogAction.CREATE_AMENITIES]: "Salon özellikleri eklendi",
     [LogAction.DELETE_AMENITIES]: "Salon özellikleri silindi",
     [LogAction.CREATE_SOCIAL_MEDIA_TYPES]: "Sosyal medya türleri eklendi",
-    [LogAction.DELETE_SOCIAL_MEDIA_TYPES]: "Sosyal medya türleri silindi"
+    [LogAction.DELETE_SOCIAL_MEDIA_TYPES]: "Sosyal medya türleri silindi",
+
+    [LogAction.GYM_CHECK_IN]: "Salona giriş yapıldı",
+    [LogAction.GYM_CHECK_OUT]: "Salondan çıkış yapıldı",
 };
 
 export type ActivityLogWithTitle = ActivityLog & { title: string };

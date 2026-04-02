@@ -15,6 +15,7 @@ import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenitie
 import { getSuperAdminLogs, getAdminLogs, getSuperAdminErrorLogs } from "./log";
 import { resetPassword } from "./auth";
 import { sendSessionReminder, getMyNotifications, markNotificationAsRead } from "./notification";
+import { gymCheckIn, gymCheckOut } from "./gymPresence";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10 });
@@ -103,5 +104,8 @@ export {
     // Notification
     sendSessionReminder,
     getMyNotifications,
-    markNotificationAsRead
+    markNotificationAsRead,
+    // Gym Presence
+    gymCheckIn,
+    gymCheckOut,
 };
