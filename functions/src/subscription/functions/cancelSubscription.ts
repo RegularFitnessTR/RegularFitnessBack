@@ -33,6 +33,8 @@ export const cancelSubscription = onCall(async (request) => {
     try {
         const subRef = db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(data.subscriptionId);
 
+        let subType = '';
+
         await db.runTransaction(async (transaction) => {
             const subDoc = await transaction.get(subRef);
             if (!subDoc.exists) {
@@ -49,6 +51,8 @@ export const cancelSubscription = onCall(async (request) => {
             if (role === 'coach' && sub.coachId !== request.auth!.uid) {
                 throw new HttpsError('permission-denied', 'Bu aboneliği iptal etme yetkiniz yok.');
             }
+
+            subType = sub.type;
 
             const now = admin.firestore.Timestamp.now();
             let cancellationDebt = 0;
@@ -113,6 +117,20 @@ export const cancelSubscription = onCall(async (request) => {
                 notified: false
             });
         });
+
+        // Paket aboneliği iptalinde: pending ve postponed randevuları sil
+        if (subType === PaymentMethodType.PACKAGE) {
+            const pendingAppointments = await db.collection(COLLECTIONS.APPOINTMENTS)
+                .where('subscriptionId', '==', data.subscriptionId)
+                .where('status', 'in', ['pending', 'postponed'])
+                .get();
+
+            if (!pendingAppointments.empty) {
+                const batch = db.batch();
+                pendingAppointments.docs.forEach((doc) => batch.delete(doc.ref));
+                await batch.commit();
+            }
+        }
 
         await logActivity({
             action: LogAction.ASSIGN_SUBSCRIPTION,
