@@ -35,9 +35,9 @@ export const persistNotification = async (
                     body: params.notification.body,
                     type: params.data?.type ?? "general",
                     data: { ...(params.data ?? {}), notificationId: ref.id },
-                    gymId: params.gymId,
                     isRead: false,
-                    createdAt
+                    createdAt,
+                    ...(params.gymId ? { gymId: params.gymId } : {})
                 };
 
                 writes.push(ref.set(notificationDoc));
