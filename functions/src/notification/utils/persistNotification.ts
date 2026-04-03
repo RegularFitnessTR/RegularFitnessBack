@@ -4,9 +4,12 @@ import { UserNotification } from "../types/notification.model";
 import { SendNotificationParams } from "./sendNotification";
 import { getNotificationOwnerCollection } from "./getNotificationOwnerCollection";
 
+/** uid → notificationId eşlemesi döner, sendAndStoreNotification bunu FCM'e ekler */
 export const persistNotification = async (
     params: SendNotificationParams
-): Promise<void> => {
+): Promise<Map<string, string>> => {
+    const uidToNotificationId = new Map<string, string>();
+
     try {
         const createdAt = admin.firestore.Timestamp.now();
         const writes: Array<Promise<FirebaseFirestore.WriteResult>> = [];
@@ -22,6 +25,8 @@ export const persistNotification = async (
                     .collection(COLLECTIONS.NOTIFICATIONS)
                     .doc();
 
+                uidToNotificationId.set(uid, ref.id);
+
                 const notificationDoc: UserNotification = {
                     id: ref.id,
                     recipientId: uid,
@@ -29,7 +34,7 @@ export const persistNotification = async (
                     title: params.notification.title,
                     body: params.notification.body,
                     type: params.data?.type ?? "general",
-                    data: params.data ?? {},
+                    data: { ...(params.data ?? {}), notificationId: ref.id },
                     gymId: params.gymId,
                     isRead: false,
                     createdAt
@@ -41,7 +46,8 @@ export const persistNotification = async (
 
         await Promise.all(writes);
     } catch (err) {
-        // Bildirim kayıt hatası ana iş akışını durdurmamalı.
         console.error("persistNotification error:", err);
     }
+
+    return uidToNotificationId;
 };

@@ -1,6 +1,7 @@
 // notifications/utils/sendNotification.ts
 
 import * as admin from "firebase-admin";
+import { Message } from "firebase-admin/messaging";
 import { UserRole } from "../../common/types/base";
 import { getTokensByRole } from "./getTokensByRole";
 import { cleanStaleTokens } from "./cleanStaleTokens";
@@ -17,8 +18,16 @@ export interface SendNotificationParams {
     gymId?: string;
 }
 
+/**
+ * Tüm kullanıcıları tek seferde, kişiselleştirilmiş data (notificationId dahil)
+ * ile FCM'e gönderir. sendEach() ile 500'lük batch'ler halinde çalışır.
+ *
+ * @param uidToData uid başına farklı data eklemek için opsiyonel map.
+ *                  Verilmezse params.data tüm kullanıcılara uygulanır.
+ */
 export const sendNotification = async (
-    params: SendNotificationParams
+    params: SendNotificationParams,
+    uidToData?: Map<string, Record<string, string>>
 ): Promise<void> => {
     try {
         // 1. Tüm roller için token'ları paralel topla
@@ -30,42 +39,48 @@ export const sendNotification = async (
 
         if (entries.length === 0) return;
 
-        // Aynı cihaza birden fazla bildirim gitmesini engelle
-        const allTokens = [...new Set(entries.map(e => e.token))];
+        // 2. Aynı token'ı tekrarlama (bir kullanıcının birden fazla cihazı olabilir,
+        //    token bazlı dedupe — uid bazlı değil)
+        const seenTokens = new Set<string>();
+        const messages: (Message & { _token: string })[] = [];
 
-        // 2. FCM limiti: max 500 token/istek
-        const chunks: string[][] = [];
-        for (let i = 0; i < allTokens.length; i += 500) {
-            chunks.push(allTokens.slice(i, i + 500));
+        for (const entry of entries) {
+            if (seenTokens.has(entry.token)) continue;
+            seenTokens.add(entry.token);
+
+            const perUidData = uidToData?.get(entry.uid);
+            const mergedData = perUidData
+                ? { ...(params.data ?? {}), ...perUidData }
+                : (params.data ?? {});
+
+            messages.push({
+                _token: entry.token,
+                token: entry.token,
+                notification: params.notification,
+                data: mergedData,
+                apns: {
+                    payload: { aps: { sound: "default", badge: 1 } }
+                }
+            });
         }
 
-        // 3. Chunk'ları paralel gönder, geçersiz token'ları topla
+        // 3. FCM limiti: sendEach() max 500 mesaj/istek
         const staleTokens: string[] = [];
 
-        await Promise.all(
-            chunks.map(async chunk => {
-                const response = await admin.messaging().sendEachForMulticast({
-                    tokens: chunk,
-                    notification: params.notification,
-                    data: params.data ?? {},
-                    apns: {
-                        payload: {
-                            aps: { sound: "default", badge: 1 }
-                        }
-                    }
-                });
+        for (let i = 0; i < messages.length; i += 500) {
+            const chunk = messages.slice(i, i + 500);
+            const response = await admin.messaging().sendEach(chunk);
 
-                response.responses.forEach((res, i) => {
-                    const code = res.error?.code ?? "";
-                    if (
-                        code === "messaging/registration-token-not-registered" ||
-                        code === "messaging/invalid-registration-token"
-                    ) {
-                        staleTokens.push(chunk[i]);
-                    }
-                });
-            })
-        );
+            response.responses.forEach((res, idx) => {
+                const code = res.error?.code ?? "";
+                if (
+                    code === "messaging/registration-token-not-registered" ||
+                    code === "messaging/invalid-registration-token"
+                ) {
+                    staleTokens.push(chunk[idx]._token);
+                }
+            });
+        }
 
         // 4. Bayat token'ları arka planda temizle — ana akışı beklemesin
         if (staleTokens.length > 0) {
