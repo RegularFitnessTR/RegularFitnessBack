@@ -81,7 +81,11 @@ export const gymCheckIn = onCall(async (request) => {
             ...(user.photoUrl ? { photoUrl: user.photoUrl } : {}),
         };
 
-        await presenceRef.set(presenceRecord);
+        const userRef = db.collection(collectionName).doc(uid);
+        const batch = db.batch();
+        batch.set(presenceRef, presenceRecord);
+        batch.update(userRef, { isInGym: true });
+        await batch.commit();
 
         await logActivity({
             action: LogAction.GYM_CHECK_IN,

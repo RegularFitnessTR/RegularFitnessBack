@@ -12,4 +12,5 @@ export interface StudentUser extends BaseUser {
     medicalConditions?: string;
     activeSubscriptionId?: string; // Link to active subscription
     pendingPaymentCount?: number;  // Updated by Cloud Functions on payment request create/approve/reject
+    isInGym?: boolean;             // Updated by Cloud Functions on gym check-in/check-out
 }

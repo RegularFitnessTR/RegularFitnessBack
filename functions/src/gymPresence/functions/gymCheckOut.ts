@@ -59,10 +59,12 @@ export const gymCheckOut = onCall(async (request) => {
         const presence = presenceDoc.data() as GymPresenceRecord;
         const now = admin.firestore.Timestamp.now();
 
-        await presenceDoc.ref.update({
-            isActive: false,
-            checkedOutAt: now,
-        });
+        const collectionName = role === 'student' ? COLLECTIONS.STUDENTS : COLLECTIONS.COACHES;
+        const userRef = db.collection(collectionName).doc(uid);
+        const batch = db.batch();
+        batch.update(presenceDoc.ref, { isActive: false, checkedOutAt: now });
+        batch.update(userRef, { isInGym: false });
+        await batch.commit();
 
         await logActivity({
             action: LogAction.GYM_CHECK_OUT,

@@ -8,5 +8,6 @@ export interface CoachUser extends BaseUser {
     expertise: string;
     experienceYears: number;
     qrCodeString: string; // For student assignment via QR code
-    gymId?: string; // Optional: which gym they belong to
+    gymId?: string;   // Optional: which gym they belong to
+    isInGym?: boolean; // Updated by Cloud Functions on gym check-in/check-out
 }
