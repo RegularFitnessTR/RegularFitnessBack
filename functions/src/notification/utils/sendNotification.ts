@@ -39,10 +39,10 @@ export const sendNotification = async (
 
         if (entries.length === 0) return;
 
-        // 2. Aynı token'ı tekrarlama (bir kullanıcının birden fazla cihazı olabilir,
-        //    token bazlı dedupe — uid bazlı değil)
+        // 2. Token bazlı dedupe — mesajları ve token sırasını ayrı tut
         const seenTokens = new Set<string>();
-        const messages: (Message & { _token: string })[] = [];
+        const messages: Message[] = [];
+        const orderedTokens: string[] = [];
 
         for (const entry of entries) {
             if (seenTokens.has(entry.token)) continue;
@@ -54,7 +54,6 @@ export const sendNotification = async (
                 : (params.data ?? {});
 
             messages.push({
-                _token: entry.token,
                 token: entry.token,
                 notification: params.notification,
                 data: mergedData,
@@ -62,6 +61,7 @@ export const sendNotification = async (
                     payload: { aps: { sound: "default", badge: 1 } }
                 }
             });
+            orderedTokens.push(entry.token);
         }
 
         // 3. FCM limiti: sendEach() max 500 mesaj/istek
@@ -69,6 +69,7 @@ export const sendNotification = async (
 
         for (let i = 0; i < messages.length; i += 500) {
             const chunk = messages.slice(i, i + 500);
+            const tokenChunk = orderedTokens.slice(i, i + 500);
             const response = await admin.messaging().sendEach(chunk);
 
             response.responses.forEach((res, idx) => {
@@ -77,7 +78,7 @@ export const sendNotification = async (
                     code === "messaging/registration-token-not-registered" ||
                     code === "messaging/invalid-registration-token"
                 ) {
-                    staleTokens.push(chunk[idx]._token);
+                    staleTokens.push(tokenChunk[idx]);
                 }
             });
         }
