@@ -139,6 +139,9 @@ export const approvePayment = onCall(async (request) => {
             notes: data.notes || ''
         });
 
+        const studentRef = db.collection(COLLECTIONS.STUDENTS).doc(payment.studentId);
+        batch.update(studentRef, { pendingPaymentCount: admin.firestore.FieldValue.increment(-1) });
+
         await batch.commit();
 
 

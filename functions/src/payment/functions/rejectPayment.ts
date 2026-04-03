@@ -51,13 +51,18 @@ export const rejectPayment = onCall(async (request) => {
             }
         }
 
-        // 4. Update payment request
-        await db.collection(COLLECTIONS.PAYMENT_REQUESTS).doc(data.paymentRequestId).update({
-            status: PaymentStatus.REJECTED,
-            processedAt: admin.firestore.Timestamp.now(),
-            processedBy: request.auth.uid,
-            notes: data.notes || 'Ödeme reddedildi.'
-        });
+        // 4. Update payment request and student pending count
+        await Promise.all([
+            db.collection(COLLECTIONS.PAYMENT_REQUESTS).doc(data.paymentRequestId).update({
+                status: PaymentStatus.REJECTED,
+                processedAt: admin.firestore.Timestamp.now(),
+                processedBy: request.auth.uid,
+                notes: data.notes || 'Ödeme reddedildi.'
+            }),
+            db.collection(COLLECTIONS.STUDENTS).doc(payment.studentId).update({
+                pendingPaymentCount: admin.firestore.FieldValue.increment(-1)
+            })
+        ]);
 
         await sendAndStoreNotification({
             recipients: [{ ids: [payment.studentId], role: "student" }],

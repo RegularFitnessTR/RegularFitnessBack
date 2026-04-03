@@ -11,4 +11,5 @@ export interface StudentUser extends BaseUser {
     gender?: "male" | "female" | "other";
     medicalConditions?: string;
     activeSubscriptionId?: string; // Link to active subscription
+    pendingPaymentCount?: number;  // Updated by Cloud Functions on payment request create/approve/reject
 }
