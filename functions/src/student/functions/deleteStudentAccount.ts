@@ -247,6 +247,10 @@ export const deleteStudentAccount = onCall(async (request) => {
             gender: admin.firestore.FieldValue.delete(),
             medicalConditions: admin.firestore.FieldValue.delete(),
             activeSubscriptionId: null,
+            // gymId ve coachId boşaltılır; böylece bu belge artık
+            // whereField("gymId",...) veya whereField("coachId",...) sorgularından dönmez.
+            gymId: "",
+            coachId: "",
             pendingPaymentCount: 0,
             isInGym: false,
             updatedAt: now,
