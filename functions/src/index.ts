@@ -1,8 +1,8 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 
 // Clean module imports using barrel exports
-import { registerStudent, assignCoach, joinGym, updateStudentProfile } from "./student";
-import { createCoach, updateCoach, deleteCoach, updateCoachProfile } from "./coach";
+import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount } from "./student";
+import { createCoach, updateCoach, deleteCoach, updateCoachProfile, deleteCoachAccount } from "./coach";
 import { createAdmin, updateAdmin, deleteAdmin } from "./admin";
 import { registerSuperAdmin } from "./superadmin";
 import { createGym, updateGym, deleteGym, getGymDetails, addPackage, updatePackage, deletePackage, updateMembershipPlan, addMembershipPlan, deleteMembershipPlan, addAmenity, deleteAmenity } from "./gym";
@@ -27,11 +27,13 @@ export {
     assignCoach,
     joinGym,
     updateStudentProfile,
+    deleteStudentAccount,
     // Coach
     createCoach,
     updateCoach,
     deleteCoach,
     updateCoachProfile,
+    deleteCoachAccount,
     // Admin
     createAdmin,
     updateAdmin,

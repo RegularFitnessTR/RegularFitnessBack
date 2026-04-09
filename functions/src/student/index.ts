@@ -8,3 +8,4 @@ export * from './functions/assignCoach';
 export * from './functions/joinGym';
 export * from './functions/updateStudentProfile';
 export * from './functions/updateStudentPassword';
+export * from './functions/deleteStudentAccount';
