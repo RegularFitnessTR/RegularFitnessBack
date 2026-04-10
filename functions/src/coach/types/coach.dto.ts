@@ -1,5 +1,19 @@
 /**
- * Coach creation data transfer object
+ * Coach self-registration data transfer object
+ */
+export interface RegisterCoachData {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber?: string;
+    expertise: string;
+    experienceYears: number;
+    gymPublicId?: string; // Optional — gym public ID to join during registration
+}
+
+/**
+ * Coach creation data transfer object (legacy — admin-created, no longer used)
  */
 export interface CreateCoachData {
     email: string;

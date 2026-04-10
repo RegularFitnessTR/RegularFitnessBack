@@ -6,11 +6,14 @@ const LOG_TITLE_BY_ACTION: Record<LogAction, string> = {
     [LogAction.UPDATE_ADMIN]: "Admin bilgileri güncellendi",
     [LogAction.DELETE_ADMIN]: "Admin silindi",
 
+    [LogAction.REGISTER_COACH]: "Eğitmen kaydı oluşturuldu",
     [LogAction.CREATE_COACH]: "Yeni eğitmen oluşturuldu",
     [LogAction.UPDATE_COACH]: "Eğitmen bilgileri güncellendi",
     [LogAction.DELETE_COACH]: "Eğitmen silindi",
     [LogAction.DELETE_COACH_ACCOUNT]: "Eğitmen hesabını sildi",
     [LogAction.UPDATE_COACH_PROFILE]: "Eğitmen profili güncellendi",
+    [LogAction.COACH_JOIN_GYM]: "Eğitmen salona katıldı",
+    [LogAction.REMOVE_COACH_FROM_GYM]: "Eğitmenin salon ilişiği kesildi",
 
     [LogAction.REGISTER_STUDENT]: "Yeni öğrenci kaydı oluşturuldu",
     [LogAction.DELETE_STUDENT]: "Öğrenci hesabını sildi",
