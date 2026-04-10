@@ -275,7 +275,7 @@ export const assignSubscription = onCall(async (request) => {
 
         // 8. Sistem eventi yaz (bildirim altyapısı için)
         await writeSystemEvent(
-            isPackageData(data) ? 'session_completed' : 'payment_due',
+            'payment_due',
             gymId,
             data.studentId,
             subscriptionId,

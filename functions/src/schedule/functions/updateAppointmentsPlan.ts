@@ -42,6 +42,9 @@ export const updateAppointmentsPlan = onCall(async (request) => {
         throw new HttpsError('invalid-argument', 'En az bir randevu girilmelidir.');
     }
 
+    const todayStartForUpdate = new Date();
+    todayStartForUpdate.setHours(0, 0, 0, 0);
+
     for (const apt of data.appointments) {
         if (!apt.date || !apt.startTime || !apt.endTime) {
             throw new HttpsError('invalid-argument', 'Her randevu için tarih, başlangıç ve bitiş saati zorunludur.');
@@ -50,6 +53,9 @@ export const updateAppointmentsPlan = onCall(async (request) => {
         const parsedDate = new Date(apt.date);
         if (Number.isNaN(parsedDate.getTime())) {
             throw new HttpsError('invalid-argument', 'Randevu tarihi geçerli bir ISO tarih olmalıdır.');
+        }
+        if (parsedDate < todayStartForUpdate) {
+            throw new HttpsError('invalid-argument', 'Geçmiş tarihe randevu planlanamaz.');
         }
 
         const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;

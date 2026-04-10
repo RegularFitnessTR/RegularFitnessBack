@@ -50,6 +50,7 @@ export const checkSubscriptionExpiry = onSchedule('0 6 * * *', async () => {
             const upcomingPayment = normalizedPayments.find(
                 (p: any) =>
                     p.status === 'pending' &&
+                    p.dueDate?.toMillis &&
                     p.dueDate.toMillis() <= threeDaysLater.toMillis() &&
                     p.dueDate.toMillis() >= now.toMillis()
             );
@@ -78,6 +79,7 @@ export const checkSubscriptionExpiry = onSchedule('0 6 * * *', async () => {
             const overduePayment = normalizedPayments.find(
                 (p: any) =>
                     p.status === 'pending' &&
+                    p.dueDate?.toMillis &&
                     p.dueDate.toMillis() < now.toMillis()
             );
 

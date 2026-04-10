@@ -30,6 +30,16 @@ export const postponeAppointment = onCall(async (request) => {
         throw new HttpsError('invalid-argument', 'Randevu ID, yeni tarih ve saatler zorunludur.');
     }
 
+    const newDateParsed = new Date(data.newDate);
+    if (isNaN(newDateParsed.getTime())) {
+        throw new HttpsError('invalid-argument', 'Geçersiz tarih formatı.');
+    }
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    if (newDateParsed < todayStart) {
+        throw new HttpsError('invalid-argument', 'Geçmiş tarihe randevu ertelenemiyor.');
+    }
+
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     if (!timeRegex.test(data.newStartTime) || !timeRegex.test(data.newEndTime)) {
         throw new HttpsError('invalid-argument', 'Saat formatı HH:mm olmalıdır.');
@@ -72,7 +82,7 @@ export const postponeAppointment = onCall(async (request) => {
         });
 
         await logActivity({
-            action: LogAction.ASSIGN_WORKOUT_SCHEDULE,
+            action: LogAction.UPDATE_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {
                 uid: request.auth!.uid,

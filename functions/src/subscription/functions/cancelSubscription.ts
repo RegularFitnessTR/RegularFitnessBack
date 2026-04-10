@@ -108,7 +108,7 @@ export const cancelSubscription = onCall(async (request) => {
             const eventRef = db.collection(COLLECTIONS.SYSTEM_EVENTS).doc();
             transaction.set(eventRef, {
                 id: eventRef.id,
-                type: cancellationDebt > 0 ? 'subscription_expired' : 'subscription_expired',
+                type: 'subscription_expired',
                 gymId: sub.gymId,
                 targetUserId: sub.studentId,
                 relatedEntityId: data.subscriptionId,

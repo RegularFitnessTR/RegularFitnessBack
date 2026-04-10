@@ -60,8 +60,15 @@ export const registerCoach = onCall(async (request) => {
             coach: true,
         });
 
-        // 3. Hocaya özgü QR kodu üret (öğrenci atama için)
-        const qrCodeString = generateQRCode();
+        // 3. Hocaya özgü QR kodu üret — çakışma olmadığından emin ol
+        let qrCodeString = generateQRCode();
+        let qrExists = await db.collection(COLLECTIONS.COACHES)
+            .where('qrCodeString', '==', qrCodeString).limit(1).get();
+        while (!qrExists.empty) {
+            qrCodeString = generateQRCode();
+            qrExists = await db.collection(COLLECTIONS.COACHES)
+                .where('qrCodeString', '==', qrCodeString).limit(1).get();
+        }
 
         // 4. Firestore'da coaches koleksiyonuna kaydet
         const newCoach: CoachUser = {

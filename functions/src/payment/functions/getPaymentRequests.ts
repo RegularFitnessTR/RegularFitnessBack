@@ -4,6 +4,37 @@ import { PaymentStatus } from "../types/payment.enums";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
+// Firestore 'in' operatörü max 10 eleman destekler — büyük listeler için chunk'lara bölüp paralel sorgu yap
+async function queryByGymIds(
+    gymIds: string[],
+    status?: PaymentStatus
+): Promise<FirebaseFirestore.DocumentData[]> {
+    const chunkSize = 10;
+    const chunks: string[][] = [];
+    for (let i = 0; i < gymIds.length; i += chunkSize) {
+        chunks.push(gymIds.slice(i, i + chunkSize));
+    }
+
+    const snapshots = await Promise.all(
+        chunks.map((chunk) => {
+            let q = db.collection(COLLECTIONS.PAYMENT_REQUESTS).where('gymId', 'in', chunk) as any;
+            if (status) q = q.where('status', '==', status);
+            q = q.orderBy('createdAt', 'desc');
+            return q.get();
+        })
+    );
+
+    const docs: FirebaseFirestore.DocumentData[] = [];
+    snapshots.forEach((snap: any) => snap.docs.forEach((d: any) => docs.push(d.data())));
+
+    // Birden fazla chunk varsa sonuçları createdAt'e göre sırala
+    if (chunks.length > 1) {
+        docs.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+    }
+
+    return docs;
+}
+
 export const getPaymentRequests = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
@@ -17,7 +48,7 @@ export const getPaymentRequests = onCall(async (request) => {
     const { status, gymId } = request.data as { status?: PaymentStatus; gymId?: string };
 
     try {
-        let query = db.collection(COLLECTIONS.PAYMENT_REQUESTS) as any;
+        let rawDocs: FirebaseFirestore.DocumentData[] = [];
 
         if (role === 'coach') {
             const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
@@ -25,47 +56,41 @@ export const getPaymentRequests = onCall(async (request) => {
             if (!coachGymId) {
                 throw new HttpsError('failed-precondition', 'Bir spor salonuna atanmamışsınız.');
             }
-            query = query.where('gymId', '==', coachGymId);
+            rawDocs = await queryByGymIds([coachGymId], status);
 
         } else if (role === 'admin') {
-            // Admin gymId belirtmemişse kendi tüm salonlarını kapsa
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+
+            if (adminGymIds.length === 0) {
+                return { success: true, paymentRequests: [], count: 0 };
+            }
+
             if (gymId) {
-                // Belirtilen gymId adminın salonlarından biri mi kontrol et
-                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-                const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
                 if (!adminGymIds.includes(gymId)) {
                     throw new HttpsError('permission-denied', 'Bu salona erişim yetkiniz yok.');
                 }
-                query = query.where('gymId', '==', gymId);
+                rawDocs = await queryByGymIds([gymId], status);
             } else {
-                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-                const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
-                if (adminGymIds.length === 0) {
-                    return { success: true, paymentRequests: [], count: 0 };
-                }
-                // Firestore 'in' operatörü max 10 eleman destekler
-                query = query.where('gymId', 'in', adminGymIds.slice(0, 10));
+                rawDocs = await queryByGymIds(adminGymIds, status);
             }
+
+        } else {
+            // superadmin: filtre yok, tüm ödeme talepleri
+            let q = db.collection(COLLECTIONS.PAYMENT_REQUESTS) as any;
+            if (status) q = q.where('status', '==', status);
+            q = q.orderBy('createdAt', 'desc');
+            const snap = await q.get();
+            rawDocs = snap.docs.map((d: any) => d.data());
         }
-        // superadmin: filtre yok, tüm ödeme talepleri
 
-        if (status) {
-            query = query.where('status', '==', status);
-        }
-
-        query = query.orderBy('createdAt', 'desc');
-
-        const snapshot = await query.get();
-        const paymentRequests = snapshot.docs.map((doc: any) => {
-            const data = doc.data();
-            return {
-                ...data,
-                // Frontend'e tutarlı tutar alanı sun
-                amount: data.type === PaymentMethodType.PACKAGE
-                    ? data.totalAmount
-                    : data.monthlyAmount
-            };
-        });
+        const paymentRequests = rawDocs.map((data) => ({
+            ...data,
+            // Frontend'e tutarlı tutar alanı sun
+            amount: data.type === PaymentMethodType.PACKAGE
+                ? data.totalAmount
+                : data.monthlyAmount
+        }));
 
         return {
             success: true,

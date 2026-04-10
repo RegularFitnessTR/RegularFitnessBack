@@ -49,6 +49,22 @@ export const assignCoach = onCall(async (request) => {
             throw new HttpsError('invalid-argument', 'Okutulan QR kodu bir hocaya ait değil.');
         }
 
+        // Hoca bir salona bağlı olmalı
+        if (!coachData.gymId) {
+            throw new HttpsError(
+                'failed-precondition',
+                'Bu hoca henüz herhangi bir salona bağlı değil. Lütfen başka bir hoca seçin.'
+            );
+        }
+
+        // Hoca ile öğrenci aynı salonda olmalı
+        if (coachData.gymId !== studentData.gymId) {
+            throw new HttpsError(
+                'failed-precondition',
+                'Bu hoca sizin kayıtlı olduğunuz salona ait değil. Lütfen kendi salonunuzdan bir hoca seçin.'
+            );
+        }
+
         const batch = db.batch();
 
         batch.update(db.collection(COLLECTIONS.STUDENTS).doc(studentId), {
@@ -68,11 +84,6 @@ export const assignCoach = onCall(async (request) => {
         }
 
         await batch.commit();
-        // 3. Update student in students collection
-        await db.collection(COLLECTIONS.STUDENTS).doc(studentId).update({
-            coachId: coachId,
-            updatedAt: admin.firestore.Timestamp.now()
-        });
 
         // Log kaydı
         await logActivity({

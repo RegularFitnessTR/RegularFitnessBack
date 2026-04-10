@@ -43,9 +43,19 @@ export const createAppointments = onCall(async (request) => {
     }
 
     // Tarih formatı ve startTime/endTime kontrolü
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     for (const apt of data.appointments) {
         if (!apt.date || !apt.startTime || !apt.endTime) {
             throw new HttpsError('invalid-argument', 'Her randevu için tarih, başlangıç ve bitiş saati zorunludur.');
+        }
+        const aptDate = new Date(apt.date);
+        if (isNaN(aptDate.getTime())) {
+            throw new HttpsError('invalid-argument', 'Geçersiz tarih formatı.');
+        }
+        if (aptDate < todayStart) {
+            throw new HttpsError('invalid-argument', 'Geçmiş tarihe randevu oluşturulamaz.');
         }
         const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
         if (!timeRegex.test(apt.startTime) || !timeRegex.test(apt.endTime)) {

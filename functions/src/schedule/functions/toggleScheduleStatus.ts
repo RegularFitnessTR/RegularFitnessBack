@@ -2,7 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
 import { ToggleScheduleStatusData } from "../types/schedule.dto";
-import { PaymentMethodType } from "../../gym/types/gym.enums";
+import { GymType } from "../../gym/types/gym.enums";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
@@ -36,12 +36,12 @@ export const toggleScheduleStatus = onCall(async (request) => {
         const schedule = scheduleDoc.data()!;
         const gymId: string = schedule.gymId;
 
-        // Reformer salonunda haftalık şablon yok — bu fonksiyon anlamsız
+        // Reformer salonunda haftalık şablon yok — bu fonksiyon sadece classic salonlar için
         const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
-        if (gymDoc.data()?.paymentMethod?.type === PaymentMethodType.PACKAGE) {
+        if (gymDoc.data()?.gymType === GymType.REFORMER) {
             throw new HttpsError(
                 'failed-precondition',
-                'Paket bazlı salonlarda haftalık program durumu değiştirilemez.'
+                'Reformer salonlarda haftalık program durumu değiştirilemez.'
             );
         }
 

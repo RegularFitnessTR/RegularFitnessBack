@@ -4,6 +4,7 @@ import { db, COLLECTIONS } from "../../common";
 import { Appointment } from "../types/schedule.model";
 import { PackageSubscription } from "../../subscription/types/subscription.model";
 import { SubscriptionStatus } from "../../subscription/types/subscription.enums";
+import { GymType } from "../../gym/types/gym.enums";
 import { SystemEvent } from "../../notification/types/system-event.model";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
@@ -42,6 +43,18 @@ export const completeAppointment = onCall(async (request) => {
 
             if (role === 'coach' && apt.coachId !== request.auth!.uid) {
                 throw new HttpsError('permission-denied', 'Bu randevu size ait değil.');
+            }
+
+            // Sadece reformer/randevu bazlı salonlarda completeAppointment kullanılır.
+            // Classic salonlarda seans düşürme useSession üzerinden yapılır.
+            if (apt.gymId) {
+                const gymDoc = await transaction.get(db.collection(COLLECTIONS.GYMS).doc(apt.gymId));
+                if (gymDoc.exists && gymDoc.data()?.gymType !== GymType.REFORMER) {
+                    throw new HttpsError(
+                        'failed-precondition',
+                        'Bu salon klasik tip salon. Seans düşürme öğrenci tarafından yapılmalıdır.'
+                    );
+                }
             }
             if (apt.status !== 'pending') {
                 throw new HttpsError(
@@ -123,8 +136,11 @@ export const completeAppointment = onCall(async (request) => {
             transaction.set(eventRef, event);
         });
 
+        const aptSnap = await aptRef.get();
+        const aptGymId = aptSnap.data()?.gymId || '';
+
         await logActivity({
-            action: LogAction.ASSIGN_WORKOUT_SCHEDULE,
+            action: LogAction.USE_SESSION,
             category: LogCategory.SCHEDULE,
             performedBy: {
                 uid: request.auth!.uid,
@@ -136,7 +152,7 @@ export const completeAppointment = onCall(async (request) => {
                 type: 'schedule',
                 name: 'Seans tamamlandı'
             },
-            gymId: '',
+            gymId: aptGymId,
             details: { appointmentId: data.appointmentId }
         });
 

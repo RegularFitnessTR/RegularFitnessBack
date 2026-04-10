@@ -100,19 +100,18 @@ export const updateAdmin = onCall(async (request) => {
             firestoreUpdates.photoUrl = data.photoUrl;
         }
 
-        // GymIds management - three modes:
+        // GymIds management - three modes (mutually exclusive for gymIds field):
         // 1. Replace all gymIds
         if (data.gymIds !== undefined) {
             firestoreUpdates.gymIds = data.gymIds;
-        }
-        // 2. Add specific gymIds (using arrayUnion for atomic operation)
-        if (data.addGymIds && data.addGymIds.length > 0) {
+        // 2. Add specific gymIds (using arrayUnion)
+        } else if (data.addGymIds && data.addGymIds.length > 0) {
             firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayUnion(...data.addGymIds);
-        }
-        // 3. Remove specific gymIds (using arrayRemove for atomic operation)
-        if (data.removeGymIds && data.removeGymIds.length > 0) {
+        // 3. Remove specific gymIds (using arrayRemove)
+        } else if (data.removeGymIds && data.removeGymIds.length > 0) {
             firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayRemove(...data.removeGymIds);
         }
+        // addGymIds ve removeGymIds aynı anda gönderilemez — caller iki ayrı çağrı yapmalı.
 
         firestoreUpdates.updatedAt = admin.firestore.Timestamp.now();
 

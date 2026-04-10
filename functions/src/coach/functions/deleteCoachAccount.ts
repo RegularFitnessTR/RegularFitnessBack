@@ -62,6 +62,10 @@ export const deleteCoachAccount = onCall(async (request) => {
 
         const coachData = coachDoc.data()!;
 
+        if (coachData.isDeleted) {
+            throw new HttpsError("not-found", "Hesap bulunamadı.");
+        }
+
         // ── AŞAMA 1: GYM CHECK-OUT ───────────────────────────────────────────
         if (coachData.isInGym) {
             const presenceSnapshot = await db

@@ -44,25 +44,29 @@ export const rejectPayment = onCall(async (request) => {
         // 3. Verify authorization
         if (role === 'coach') {
             const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
-            const coachData = coachDoc.data();
-
-            if (coachData?.gymId !== payment.gymId) {
+            if (coachDoc.data()?.gymId !== payment.gymId) {
+                throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini reddedemezsiniz.');
+            }
+        } else if (role === 'admin') {
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!adminGymIds.includes(payment.gymId)) {
                 throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini reddedemezsiniz.');
             }
         }
 
         // 4. Update payment request and student pending count
-        await Promise.all([
-            db.collection(COLLECTIONS.PAYMENT_REQUESTS).doc(data.paymentRequestId).update({
-                status: PaymentStatus.REJECTED,
-                processedAt: admin.firestore.Timestamp.now(),
-                processedBy: request.auth.uid,
-                notes: data.notes || 'Ödeme reddedildi.'
-            }),
-            db.collection(COLLECTIONS.STUDENTS).doc(payment.studentId).update({
-                pendingPaymentCount: admin.firestore.FieldValue.increment(-1)
-            })
-        ]);
+        const rejectBatch = db.batch();
+        rejectBatch.update(db.collection(COLLECTIONS.PAYMENT_REQUESTS).doc(data.paymentRequestId), {
+            status: PaymentStatus.REJECTED,
+            processedAt: admin.firestore.Timestamp.now(),
+            processedBy: request.auth.uid,
+            notes: data.notes || 'Ödeme reddedildi.'
+        });
+        rejectBatch.update(db.collection(COLLECTIONS.STUDENTS).doc(payment.studentId), {
+            pendingPaymentCount: admin.firestore.FieldValue.increment(-1)
+        });
+        await rejectBatch.commit();
 
         await sendAndStoreNotification({
             recipients: [{ ids: [payment.studentId], role: "student" }],

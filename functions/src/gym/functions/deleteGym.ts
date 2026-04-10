@@ -44,30 +44,52 @@ export const deleteGym = onCall(async (request) => {
             );
         }
 
-        // 3. Remove gymId from all coaches in this gym
-        const coachesSnapshot = await db.collection(COLLECTIONS.COACHES)
-            .where('gymId', '==', gymId)
-            .get();
+        const now = admin.firestore.Timestamp.now();
 
+        // 3. Bu salona bağlı tüm coach, öğrenci ve abonelik referanslarını temizle
+        const [coachesSnap, studentsSnap, activeSubsSnap, pendingApptsSnap] = await Promise.all([
+            db.collection(COLLECTIONS.COACHES).where('gymId', '==', gymId).get(),
+            db.collection(COLLECTIONS.STUDENTS).where('gymId', '==', gymId).get(),
+            db.collection(COLLECTIONS.SUBSCRIPTIONS).where('gymId', '==', gymId)
+                .where('status', '==', 'active').get(),
+            db.collection(COLLECTIONS.APPOINTMENTS).where('gymId', '==', gymId)
+                .where('status', 'in', ['pending', 'postponed']).get(),
+        ]);
+
+        // 4. Delete gym document + admin gymIds güncelle (ilk batch — 2 slot)
         const batch = db.batch();
-
-        coachesSnapshot.forEach(doc => {
-            batch.update(doc.ref, {
-                gymId: admin.firestore.FieldValue.delete(),
-                updatedAt: admin.firestore.Timestamp.now()
-            });
-        });
-
-        // 4. Delete gym document
         batch.delete(db.collection(COLLECTIONS.GYMS).doc(gymId));
-
-        // 5. Remove gymId from admin's gymIds array
         batch.update(db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid), {
             gymIds: admin.firestore.FieldValue.arrayRemove(gymId),
-            updatedAt: admin.firestore.Timestamp.now()
+            updatedAt: now
         });
 
+        // İlişkili dokümanları topla
+        type BatchOp = (b: FirebaseFirestore.WriteBatch) => void;
+        const ops: BatchOp[] = [];
+
+        coachesSnap.forEach(doc => ops.push(b =>
+            b.update(doc.ref, { gymId: '', updatedAt: now })
+        ));
+        studentsSnap.forEach(doc => ops.push(b =>
+            b.update(doc.ref, { gymId: '', coachId: '', activeSubscriptionId: null, updatedAt: now })
+        ));
+        activeSubsSnap.forEach(doc => ops.push(b =>
+            b.update(doc.ref, { status: 'expired', cancelledAt: now,
+                cancellationReason: 'gym_deleted', updatedAt: now })
+        ));
+        pendingApptsSnap.forEach(doc => ops.push(b => b.delete(doc.ref)));
+
+        // İlk batch'e kalan 497 slot'u doldur
+        ops.slice(0, 497).forEach(fn => fn(batch));
         await batch.commit();
+
+        // Kalan op'ları 499'luk batch'ler halinde işle
+        for (let i = 497; i < ops.length; i += 499) {
+            const extraBatch = db.batch();
+            ops.slice(i, i + 499).forEach(fn => fn(extraBatch));
+            await extraBatch.commit();
+        }
 
         // Log kaydı
         await logActivity({

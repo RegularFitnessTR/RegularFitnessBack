@@ -44,6 +44,24 @@ export const gymCheckIn = onCall(async (request) => {
         const gym = gymDoc.data() as Gym;
         const gymId = gymDoc.id;
 
+        // Kullanıcı bilgilerini getir ve salon üyeliğini doğrula
+        const collectionName = role === 'student' ? COLLECTIONS.STUDENTS : COLLECTIONS.COACHES;
+        const userDoc = await db.collection(collectionName).doc(uid).get();
+
+        if (!userDoc.exists) {
+            throw new HttpsError('not-found', 'Kullanıcı bilgileri bulunamadı.');
+        }
+
+        const user = userDoc.data() as BaseUser & { gymId?: string };
+
+        // Kullanıcı bu salona kayıtlı olmalı
+        if (user.gymId !== gymId) {
+            throw new HttpsError(
+                'permission-denied',
+                'Bu salona kayıtlı değilsiniz. Giriş yapmak için kendi salonunuzun QR kodunu okutun.'
+            );
+        }
+
         // Kullanıcının zaten aktif girişi var mı kontrol et
         const existingPresence = await db.collection(COLLECTIONS.GYM_PRESENCE)
             .where('gymId', '==', gymId)
@@ -55,16 +73,6 @@ export const gymCheckIn = onCall(async (request) => {
         if (!existingPresence.empty) {
             throw new HttpsError('already-exists', 'Zaten bu salona giriş yaptınız.');
         }
-
-        // Kullanıcı bilgilerini getir
-        const collectionName = role === 'student' ? COLLECTIONS.STUDENTS : COLLECTIONS.COACHES;
-        const userDoc = await db.collection(collectionName).doc(uid).get();
-
-        if (!userDoc.exists) {
-            throw new HttpsError('not-found', 'Kullanıcı bilgileri bulunamadı.');
-        }
-
-        const user = userDoc.data() as BaseUser;
         const now = admin.firestore.Timestamp.now();
 
         const presenceRef = db.collection(COLLECTIONS.GYM_PRESENCE).doc();

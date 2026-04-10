@@ -68,6 +68,10 @@ export const deleteStudentAccount = onCall(async (request) => {
 
         const studentData = studentDoc.data()!;
 
+        if (studentData.isDeleted) {
+            throw new HttpsError("not-found", "Hesap bulunamadı.");
+        }
+
         // ── BORÇ KONTROLÜ ────────────────────────────────────────────────────
         // Aktif aboneliği olan ve bakiyesi negatif (borcu olan) öğrenciler
         // hesaplarını silemez.

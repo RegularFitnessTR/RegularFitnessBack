@@ -28,6 +28,20 @@ export const getStudentSubscription = onCall(async (request) => {
         }
 
         const studentData = studentDoc.data()!;
+
+        // Coach sadece kendi öğrencisinin aboneliğini görebilir
+        if (role === 'coach' && studentData.coachId !== request.auth.uid) {
+            throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+        }
+
+        // Admin sadece kendi salonundaki öğrencilerin aboneliğini görebilir
+        if (role === 'admin') {
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!adminGymIds.includes(studentData.gymId)) {
+                throw new HttpsError('permission-denied', 'Bu öğrencinin salonuna erişim yetkiniz yok.');
+            }
+        }
         const subscriptionId = studentData.activeSubscriptionId;
 
         if (!subscriptionId) {

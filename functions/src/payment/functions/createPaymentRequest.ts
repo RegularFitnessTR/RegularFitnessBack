@@ -141,10 +141,10 @@ export const createPaymentRequest = onCall(async (request) => {
             };
         }
         const studentRef = db.collection(COLLECTIONS.STUDENTS).doc(studentId);
-        await Promise.all([
-            paymentRef.set(newPaymentRequest),
-            studentRef.update({ pendingPaymentCount: admin.firestore.FieldValue.increment(1) })
-        ]);
+        const paymentBatch = db.batch();
+        paymentBatch.set(paymentRef, newPaymentRequest);
+        paymentBatch.update(studentRef, { pendingPaymentCount: admin.firestore.FieldValue.increment(1) });
+        await paymentBatch.commit();
         const [coachSnap, adminSnap] = await Promise.all([
             db.collection(COLLECTIONS.COACHES).where("gymId", "==", gymId).get(),
             db.collection(COLLECTIONS.ADMINS).where("gymIds", "array-contains", gymId).get()

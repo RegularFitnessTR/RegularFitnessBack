@@ -86,7 +86,7 @@ export const cancelAppointment = onCall(async (request) => {
         await eventRef.set(event);
 
         await logActivity({
-            action: LogAction.ASSIGN_WORKOUT_SCHEDULE,
+            action: LogAction.USE_SESSION,
             category: LogCategory.SCHEDULE,
             performedBy: {
                 uid: request.auth!.uid,

@@ -45,9 +45,13 @@ export const approvePayment = onCall(async (request) => {
         // Verify authorization
         if (role === 'coach') {
             const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
-            const coachData = coachDoc.data();
-
-            if (coachData?.gymId !== payment.gymId) {
+            if (coachDoc.data()?.gymId !== payment.gymId) {
+                throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini onaylayamazsınız.');
+            }
+        } else if (role === 'admin') {
+            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            if (!adminGymIds.includes(payment.gymId)) {
                 throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini onaylayamazsınız.');
             }
         }

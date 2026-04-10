@@ -97,8 +97,8 @@ export const createMeasurement = onCall(async (request) => {
             category: LogCategory.MEASUREMENT,
             performedBy: {
                 uid: request.auth!.uid,
-                role: 'coach',
-                name: request.auth!.token.name || 'Coach'
+                role: role as any,
+                name: request.auth!.token.name || role
             },
             targetEntity: {
                 id: measurementId,

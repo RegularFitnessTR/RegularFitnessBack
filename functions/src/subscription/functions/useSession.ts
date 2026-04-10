@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
-import { PaymentMethodType } from "../../gym/types/gym.enums";
+import { GymType, PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription } from "../types/subscription.model";
 import { SubscriptionStatus } from "../types/subscription.enums";
 import { logActivity } from "../../log/utils/logActivity";
@@ -49,7 +49,7 @@ export const useSession = onCall(async (request) => {
         if (gymId) {
             const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
             const gymData = gymDoc.data();
-            if (gymData?.paymentMethod?.type === PaymentMethodType.PACKAGE) {
+            if (gymData?.gymType === GymType.REFORMER) {
                 throw new HttpsError(
                     'failed-precondition',
                     'Bu salon randevu sistemi kullanıyor. Seans düşürme işlemi hoca tarafından randevu tamamlama üzerinden yapılmalıdır.'

@@ -70,12 +70,14 @@ export const createGym = onCall(async (request) => {
             newGym.photoUrl = photoUrl;
         }
 
-        await gymRef.set(newGym);
-
-        await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).update({
+        // Gym ve admin güncellemesini batch ile atomik yaz
+        const gymBatch = db.batch();
+        gymBatch.set(gymRef, newGym);
+        gymBatch.update(db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid), {
             gymIds: admin.firestore.FieldValue.arrayUnion(gymId),
             updatedAt: admin.firestore.Timestamp.now()
         });
+        await gymBatch.commit();
 
         await logActivity({
             action: LogAction.CREATE_GYM,
