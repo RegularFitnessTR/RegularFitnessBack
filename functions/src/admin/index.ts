@@ -6,3 +6,4 @@ export * from './types/admin.dto';
 export * from './functions/createAdmin';
 export * from './functions/updateAdmin';
 export * from './functions/deleteAdmin';
+export * from './functions/deleteAdminAccount';

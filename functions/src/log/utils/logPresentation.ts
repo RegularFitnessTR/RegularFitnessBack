@@ -5,6 +5,7 @@ const LOG_TITLE_BY_ACTION: Record<LogAction, string> = {
     [LogAction.CREATE_ADMIN]: "Yeni admin oluşturuldu",
     [LogAction.UPDATE_ADMIN]: "Admin bilgileri güncellendi",
     [LogAction.DELETE_ADMIN]: "Admin silindi",
+    [LogAction.DELETE_ADMIN_ACCOUNT]: "Admin hesabını sildi",
 
     [LogAction.REGISTER_COACH]: "Eğitmen kaydı oluşturuldu",
     [LogAction.CREATE_COACH]: "Yeni eğitmen oluşturuldu",
