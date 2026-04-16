@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, serializeTimestamps } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
@@ -84,13 +84,42 @@ export const getPaymentRequests = onCall(async (request) => {
             rawDocs = snap.docs.map((d: any) => d.data());
         }
 
-        const paymentRequests = rawDocs.map((data) => ({
-            ...data,
-            // Frontend'e tutarlı tutar alanı sun
-            amount: data.type === PaymentMethodType.PACKAGE
-                ? data.totalAmount
-                : data.monthlyAmount
-        }));
+        // Öğrenci bilgilerini tek turda batch ile yükle (N+1 önlemek için db.getAll)
+        const studentIds = [...new Set(rawDocs.map((d) => d.studentId).filter(Boolean))];
+        const studentMap: Record<string, { firstName: string; lastName: string; photoUrl: string }> = {};
+
+        if (studentIds.length > 0) {
+            const studentRefs = studentIds.map((sid) => db.collection(COLLECTIONS.STUDENTS).doc(sid));
+            const studentDocs = await db.getAll(...studentRefs);
+            studentDocs.forEach((doc) => {
+                if (doc.exists) {
+                    const s = doc.data()!;
+                    studentMap[doc.id] = {
+                        firstName: s.firstName || '',
+                        lastName: s.lastName || '',
+                        photoUrl: s.photoUrl || ''
+                    };
+                }
+            });
+        }
+
+        const paymentRequests = rawDocs.map((data) => {
+            // Tarih alanlarını ISO 8601 string'e çevir (createdAt, processedAt)
+            const serialized = serializeTimestamps(data) as Record<string, any>;
+            const student = studentMap[data.studentId];
+            return {
+                ...serialized,
+                // Frontend'e tutarlı tutar alanı sun
+                amount: data.type === PaymentMethodType.PACKAGE
+                    ? data.totalAmount
+                    : data.monthlyAmount,
+                // Öğrenci enrichment — liste ekranında ayrı sorguya gerek kalmaz
+                studentFirstName: student?.firstName || '',
+                studentLastName: student?.lastName || '',
+                studentFullName: student ? `${student.firstName} ${student.lastName}`.trim() : '',
+                studentPhotoUrl: student?.photoUrl || ''
+            };
+        });
 
         return {
             success: true,
