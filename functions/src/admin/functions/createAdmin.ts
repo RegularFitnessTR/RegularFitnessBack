@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth, COLLECTIONS } from "../../common";
+import { db, auth, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { AdminUser } from "../types/admin.model";
 import { RegisterAdminData } from "../types/admin.dto";
 import { logActivity } from "../../log/utils/logActivity";
@@ -36,10 +35,11 @@ export const createAdmin = onCall(async (request) => {
             phoneNumber: data.phoneNumber || undefined,
         });
 
-        // 3. Set custom claims for admin role
+        // 3. Set custom claims for admin role (gymIds dahil)
         await auth.setCustomUserClaims(userRecord.uid, {
             role: 'admin',
-            admin: true
+            admin: true,
+            gymIds: data.gymIds || []
         });
 
         // 4. Create Firestore document in admins collection

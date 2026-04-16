@@ -5,6 +5,9 @@ import { MembershipSubscription } from "../../../subscription/types/subscription
 import { SubscriptionStatus } from "../../../subscription/types/subscription.enums";
 import { PaymentMethodType } from "../../../gym/types/gym.enums";
 import { SystemEvent } from "../../../notification/types/system-event.model";
+import { logError } from "../../../log/utils/logError";
+import { LogSeverity } from "../../../log/types/log.enums";
+import { sendNotification } from "../../../notification/utils/sendNotification";
 
 // Her gün gece yarısı çalışır
 export const checkCommitmentExpiry = onSchedule('0 0 * * *', async () => {
@@ -57,5 +60,36 @@ export const checkCommitmentExpiry = onSchedule('0 0 * * *', async () => {
 
     } catch (error) {
         console.error('checkCommitmentExpiry hatası:', error);
+
+        const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+
+        await logError({
+            functionName: 'checkCommitmentExpiry',
+            error,
+            severity: LogSeverity.CRITICAL,
+        });
+
+        // Superadmin bildirim akışı hata verirse de ayrıca logla.
+        try {
+            const superadminSnap = await db.collection(COLLECTIONS.SUPERADMINS).get();
+            if (!superadminSnap.empty) {
+                const superadminIds = superadminSnap.docs.map(d => d.id);
+                await sendNotification({
+                    recipients: [{ ids: superadminIds, role: 'superadmin' }],
+                    notification: {
+                        title: 'Cron Job Hatası: checkCommitmentExpiry',
+                        body: `Taahhüt süresi kontrolü başarısız oldu. Hata: ${errorMessage}`,
+                    },
+                    data: { type: 'cron_error', functionName: 'checkCommitmentExpiry' },
+                });
+            }
+        } catch (notificationFlowError) {
+            await logError({
+                functionName: 'checkCommitmentExpiry.notificationFlow',
+                error: notificationFlowError,
+                severity: LogSeverity.ERROR,
+                requestData: { originalErrorMessage: errorMessage },
+            });
+        }
     }
 });

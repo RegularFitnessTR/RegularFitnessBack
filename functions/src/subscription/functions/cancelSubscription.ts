@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { SubscriptionStatus } from "../types/subscription.enums";
 import { MembershipSubscription } from "../types/subscription.model";
 import { PaymentMethodType } from "../../gym/types/gym.enums";

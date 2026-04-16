@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth, COLLECTIONS, generateQRCode } from "../../common";
+import { db, auth, COLLECTIONS, generateQRCode, onCall, HttpsError } from "../../common";
 import { CoachUser } from "../types/coach.model";
 import { RegisterCoachData } from "../types/coach.dto";
 import { logActivity } from "../../log/utils/logActivity";
@@ -54,10 +53,11 @@ export const registerCoach = onCall(async (request) => {
             phoneNumber: data.phoneNumber || undefined,
         });
 
-        // 2. Coach rolü için custom claim ata
+        // 2. Coach rolü için custom claim ata (gymId dahil)
         await auth.setCustomUserClaims(userRecord.uid, {
             role: "coach",
             coach: true,
+            gymId: resolvedGymId,
         });
 
         // 3. Hocaya özgü QR kodu üret — çakışma olmadığından emin ol

@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { logError } from "../../log/utils/logError";
 
 export const getMeasurements = onCall(async (request) => {
@@ -39,11 +38,8 @@ export const getMeasurements = onCall(async (request) => {
                 if (!gymId) {
                     throw new HttpsError('permission-denied', 'Öğrenci bir spor salonuna atanmamış.');
                 }
-                
-                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-                const adminData = adminDoc.data();
-                const adminGymIds = adminData?.gymIds || [];
 
+                const adminGymIds: string[] = request.auth.token.gymIds || [];
                 if (!adminGymIds.includes(gymId)) {
                     throw new HttpsError('permission-denied', 'Bu spor salonundaki öğrencileri görüntüleme yetkiniz yok.');
                 }

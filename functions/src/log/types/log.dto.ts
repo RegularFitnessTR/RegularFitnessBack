@@ -6,8 +6,10 @@ import { LogAction, LogCategory, LogSeverity } from './log.enums';
 export interface GetLogsData {
     /** Number of logs to return (default: 50, max: 200) */
     limit?: number;
-    /** Document ID to start after for pagination */
+    /** Document ID to start after for pagination (legacy) */
     startAfter?: string;
+    /** Timestamp (ms) to start after for pagination */
+    startAfterTimestamp?: number;
     /** Filter by category */
     category?: LogCategory;
     /** Filter by action */

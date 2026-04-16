@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { GetLogsData } from "../types/log.dto";
 import { ActivityLog } from "../types/log.model";
 import { logError } from "../utils/logError";
@@ -26,17 +25,8 @@ export const getAdminLogs = onCall(async (request) => {
     }
 
     try {
-        // 3. Admin'in gym'lerini al
-        const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-
-        if (!adminDoc.exists) {
-            throw new HttpsError('not-found', 'Admin kaydı bulunamadı.');
-        }
-
-        const adminData = adminDoc.data();
-        const legacyGymId = typeof adminData?.gymId === 'string' ? adminData.gymId : undefined;
-        const gymIdsFromArray = Array.isArray(adminData?.gymIds) ? adminData.gymIds : [];
-        const gymIds: string[] = [...new Set([...(legacyGymId ? [legacyGymId] : []), ...gymIdsFromArray])];
+        // 3. Admin'in gym'lerini custom claims'den al
+        const gymIds: string[] = request.auth.token.gymIds || [];
 
         if (gymIds.length === 0) {
             return {

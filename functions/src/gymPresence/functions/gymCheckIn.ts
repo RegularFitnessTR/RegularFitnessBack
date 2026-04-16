@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { Gym } from "../../gym/types/gym.model";
 import { BaseUser } from "../../common/types/base";
 import { GymPresenceRecord } from "../types/gymPresence.model";

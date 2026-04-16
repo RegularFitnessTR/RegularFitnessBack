@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth, COLLECTIONS, generateQRCode } from "../../common";
+import { db, auth, COLLECTIONS, generateQRCode, onCall, HttpsError } from "../../common";
 import { CoachUser } from "../types/coach.model";
 import { CreateCoachData } from "../types/coach.dto";
 import { logActivity } from "../../log/utils/logActivity";
@@ -38,10 +37,11 @@ export const createCoach = onCall(async (request) => {
             phoneNumber: data.phoneNumber || undefined,
         });
 
-        // 4. Set custom claims for coach role
+        // 4. Set custom claims for coach role (gymId dahil)
         await auth.setCustomUserClaims(userRecord.uid, {
             role: 'coach',
-            coach: true
+            coach: true,
+            gymId: data.gymId || ''
         });
 
         // 5. Generate unique QR code string for coach

@@ -1,7 +1,6 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { defineString } from "firebase-functions/params";
-import { db, auth, COLLECTIONS } from "../../common";
+import { db, auth, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { SuperAdminUser } from "../types/superadmin.model";
 import { RegisterSuperAdminData } from "../types/superadmin.dto";
 import { logActivity } from "../../log/utils/logActivity";

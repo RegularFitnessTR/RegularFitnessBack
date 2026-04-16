@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { UserRole } from "../../common/types/base";
 import { logError } from "../../log/utils/logError";
 import { MarkNotificationAsReadData } from "../types/notification.dto";

@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { RemoveAmenityData } from "../types/gym.dto";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";

@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { BodyMeasurement } from "../types/measurement.model";
 import { CreateMeasurementData } from "../types/measurement.dto";
 import { logActivity } from "../../log/utils/logActivity";
@@ -44,10 +43,7 @@ export const createMeasurement = onCall(async (request) => {
                 throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
             }
         } else if (role === 'admin') {
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminData = adminDoc.data();
-            const adminGymIds = adminData?.gymIds || [];
-
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!adminGymIds.includes(studentGymId)) {
                 throw new HttpsError('permission-denied', 'Bu öğrencinin spor salonuna erişim yetkiniz yok.');
             }

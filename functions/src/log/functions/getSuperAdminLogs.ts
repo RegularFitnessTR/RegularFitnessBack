@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { GetLogsData } from "../types/log.dto";
 import { ActivityLog } from "../types/log.model";
 import { logError } from "../utils/logError";
@@ -51,12 +50,13 @@ export const getSuperAdminLogs = onCall(async (request) => {
             query = query.where('timestamp', '<=', endTimestamp);
         }
 
-        // Sayfalama
-        if (data.startAfter) {
-            const startAfterDoc = await db.collection(COLLECTIONS.ACTIVITY_LOGS).doc(data.startAfter).get();
-            if (startAfterDoc.exists) {
-                query = query.startAfter(startAfterDoc);
+        // Sayfalama (timestamp cursor)
+        if (data.startAfterTimestamp !== undefined) {
+            const cursorMillis = Number(data.startAfterTimestamp);
+            if (!Number.isFinite(cursorMillis) || cursorMillis <= 0) {
+                throw new HttpsError('invalid-argument', 'startAfterTimestamp gecersiz. Milisaniye cinsinden gecerli bir deger gonderin.');
             }
+            query = query.startAfter(admin.firestore.Timestamp.fromMillis(cursorMillis));
         }
 
         query = query.limit(limit);
@@ -71,7 +71,8 @@ export const getSuperAdminLogs = onCall(async (request) => {
             logs: formattedLogs,
             count: formattedLogs.length,
             hasMore: formattedLogs.length === limit,
-            lastDocId: formattedLogs.length > 0 ? formattedLogs[formattedLogs.length - 1].id : null
+            lastDocId: formattedLogs.length > 0 ? formattedLogs[formattedLogs.length - 1].id : null,
+            lastTimestamp: formattedLogs.length > 0 ? logs[logs.length - 1].timestamp.toMillis() : null
         };
 
     } catch (error: any) {

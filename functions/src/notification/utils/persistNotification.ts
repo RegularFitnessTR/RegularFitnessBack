@@ -1,5 +1,7 @@
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../common";
+import { logError } from "../../log/utils/logError";
+import { LogSeverity } from "../../log/types/log.enums";
 import { UserNotification } from "../types/notification.model";
 import { SendNotificationParams } from "./sendNotification";
 import { getNotificationOwnerCollection } from "./getNotificationOwnerCollection";
@@ -47,6 +49,22 @@ export const persistNotification = async (
         await Promise.all(writes);
     } catch (err) {
         console.error("persistNotification error:", err);
+
+        const totalRecipients = params.recipients.reduce(
+            (sum, group) => sum + group.ids.length,
+            0
+        );
+
+        await logError({
+            functionName: "persistNotification",
+            error: err,
+            severity: LogSeverity.ERROR,
+            requestData: {
+                recipientGroupCount: params.recipients.length,
+                totalRecipients,
+                notificationType: params.data?.type ?? "general",
+            },
+        });
     }
 
     return uidToNotificationId;

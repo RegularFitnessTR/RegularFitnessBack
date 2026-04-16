@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription } from "../../subscription/types/subscription.model";
 import { logActivity } from "../../log/utils/logActivity";

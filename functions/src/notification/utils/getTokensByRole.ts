@@ -7,6 +7,7 @@ const ROLE_COLLECTION: Record<string, string> = {
     student: COLLECTIONS.STUDENTS,
     coach: COLLECTIONS.COACHES,
     admin: COLLECTIONS.ADMINS,
+    superadmin: COLLECTIONS.SUPERADMINS,
 };
 
 export interface TokenEntry {
@@ -22,9 +23,8 @@ export const getTokensByRole = async (
     const collection = ROLE_COLLECTION[role];
     if (!collection || userIds.length === 0) return [];
 
-    const docs = await Promise.all(
-        userIds.map(uid => db.collection(collection).doc(uid).get())
-    );
+    const refs = userIds.map(uid => db.collection(collection).doc(uid));
+    const docs = await db.getAll(...refs);
 
     const result: TokenEntry[] = [];
 

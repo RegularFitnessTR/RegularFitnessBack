@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
 import { Gym } from "../types/gym.model";
 import { CreateGymData } from "../types/gym.dto";
 import { logActivity } from "../../log/utils/logActivity";
@@ -78,6 +77,11 @@ export const createGym = onCall(async (request) => {
             updatedAt: admin.firestore.Timestamp.now()
         });
         await gymBatch.commit();
+
+        // Admin claims'ine yeni gymId'yi ekle
+        const updatedAdminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+        const updatedGymIds: string[] = updatedAdminDoc.data()?.gymIds || [];
+        await syncGymClaims(request.auth.uid, { gymIds: updatedGymIds });
 
         await logActivity({
             action: LogAction.CREATE_GYM,

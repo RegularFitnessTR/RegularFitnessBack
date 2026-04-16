@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, auth, COLLECTIONS } from "../../common";
+import { db, auth, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
 import { UpdateCoachData } from "../types/coach.dto";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
@@ -100,6 +99,11 @@ export const updateCoach = onCall(async (request) => {
         // Firestore güncellemesi varsa uygula
         if (Object.keys(firestoreUpdates).length > 0) {
             await db.collection(COLLECTIONS.COACHES).doc(data.coachUid).update(firestoreUpdates);
+        }
+
+        // gymId değiştiyse custom claims'i de güncelle
+        if (data.gymId !== undefined) {
+            await syncGymClaims(data.coachUid, { gymId: data.gymId || '' });
         }
 
         // Log kaydı

@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { logError } from "../../log/utils/logError";
 
 export const getGymDetails = onCall(async (request) => {

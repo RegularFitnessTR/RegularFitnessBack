@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { ProcessPaymentData } from "../types/payment.dto";
 import { MembershipPaymentRequest, PackagePaymentRequest, PaymentRequest } from "../types/payment.model";
@@ -42,15 +41,13 @@ export const approvePayment = onCall(async (request) => {
             throw new HttpsError('failed-precondition', 'Bu ödeme talebi zaten işlenmiş.');
         }
 
-        // Verify authorization
+        // Verify authorization (custom claims'den)
         if (role === 'coach') {
-            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
-            if (coachDoc.data()?.gymId !== payment.gymId) {
+            if ((request.auth.token.gymId || '') !== payment.gymId) {
                 throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini onaylayamazsınız.');
             }
         } else if (role === 'admin') {
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!adminGymIds.includes(payment.gymId)) {
                 throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini onaylayamazsınız.');
             }
@@ -136,9 +133,11 @@ export const approvePayment = onCall(async (request) => {
                 updatedAt: now
             });
         }
+        const processedAt = admin.firestore.Timestamp.now();
+
         batch.update(paymentDoc.ref, {
             status: PaymentStatus.APPROVED,
-            processedAt: admin.firestore.Timestamp.now(),
+            processedAt,
             processedBy: request.auth.uid,
             notes: data.notes || ''
         });
@@ -183,7 +182,8 @@ export const approvePayment = onCall(async (request) => {
 
         return {
             success: true,
-            message: "Ödeme talebi onaylandı."
+            message: "Ödeme talebi onaylandı.",
+            processedAt: processedAt.toDate().toISOString()
         };
 
     } catch (error: any) {
