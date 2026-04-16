@@ -4,6 +4,7 @@ import { UserRole } from "../../common/types/base";
 import { LogAction, LogCategory } from "../types/log.enums";
 import { ActivityLog, LogTargetEntity } from "../types/log.model";
 import { resolveLogTitle } from "./logPresentation";
+import { logError } from "./logError";
 
 /**
  * Parameters for logging an activity
@@ -55,5 +56,20 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
         await logRef.set(logEntry);
     } catch (error) {
         console.warn("[ActivityLog] Log kaydı yazılamadı:", error);
+
+        // Ana iş akışını bozmadan activity log kaybını izlenebilir hale getir.
+        await logError({
+            functionName: "logActivity",
+            error,
+            userId: params.performedBy.uid,
+            userRole: params.performedBy.role,
+            requestData: {
+                action: params.action,
+                category: params.category,
+                gymId: params.gymId,
+                hasTargetEntity: Boolean(params.targetEntity),
+                detailsKeyCount: params.details ? Object.keys(params.details).length : 0,
+            },
+        });
     }
 }

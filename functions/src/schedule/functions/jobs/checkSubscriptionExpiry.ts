@@ -1,5 +1,3 @@
-
-
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as admin from "firebase-admin";
 import { db, COLLECTIONS } from "../../../common";
@@ -8,10 +6,11 @@ import { SubscriptionStatus } from "../../../subscription/types/subscription.enu
 import { PaymentMethodType } from "../../../gym/types/gym.enums";
 import { SystemEvent } from "../../../notification/types/system-event.model";
 import { ensureMonthlyPaymentsUpToMonth, getElapsedMonthNumber } from "../../../subscription/utils/membershipPayments";
+import { logError } from "../../../log/utils/logError";
+import { LogSeverity } from "../../../log/types/log.enums";
+import { sendNotification } from "../../../notification/utils/sendNotification";
 
 // Her gün sabah 06:00'da çalışır
-
-
 export const checkSubscriptionExpiry = onSchedule('0 6 * * *', async () => {
     const now = admin.firestore.Timestamp.now();
 
@@ -112,5 +111,36 @@ export const checkSubscriptionExpiry = onSchedule('0 6 * * *', async () => {
 
     } catch (error) {
         console.error('checkSubscriptionExpiry hatası:', error);
+
+        const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+
+        await logError({
+            functionName: 'checkSubscriptionExpiry',
+            error,
+            severity: LogSeverity.CRITICAL,
+        });
+
+        // Superadmin bildirim akışı hata verirse de ayrıca logla.
+        try {
+            const superadminSnap = await db.collection(COLLECTIONS.SUPERADMINS).get();
+            if (!superadminSnap.empty) {
+                const superadminIds = superadminSnap.docs.map(d => d.id);
+                await sendNotification({
+                    recipients: [{ ids: superadminIds, role: 'superadmin' }],
+                    notification: {
+                        title: 'Cron Job Hatası: checkSubscriptionExpiry',
+                        body: `Üyelik/ödeme kontrolü başarısız oldu. Hata: ${errorMessage}`,
+                    },
+                    data: { type: 'cron_error', functionName: 'checkSubscriptionExpiry' },
+                });
+            }
+        } catch (notificationFlowError) {
+            await logError({
+                functionName: 'checkSubscriptionExpiry.notificationFlow',
+                error: notificationFlowError,
+                severity: LogSeverity.ERROR,
+                requestData: { originalErrorMessage: errorMessage },
+            });
+        }
     }
 });

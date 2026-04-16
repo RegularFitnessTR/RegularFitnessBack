@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
@@ -34,8 +33,7 @@ export const getStudentSchedule = onCall(async (request) => {
         }
 
         if (role === 'admin') {
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!gymId || !adminGymIds.includes(gymId)) {
                 throw new HttpsError('permission-denied', 'Bu öğrencinin salonuna erişim yetkiniz yok.');
             }
@@ -59,27 +57,31 @@ export const getStudentSchedule = onCall(async (request) => {
             }
 
             // Tüm durumları getir, frontend filtrelesin
-            const appointmentsQuery = await db.collection(COLLECTIONS.APPOINTMENTS)
-                .where('subscriptionId', '==', activeSubscriptionId)
+            const appointmentsBaseQuery = db.collection(COLLECTIONS.APPOINTMENTS)
+                .where('subscriptionId', '==', activeSubscriptionId);
+
+            const appointmentsQuery = await appointmentsBaseQuery
                 .orderBy('sessionNumber', 'asc')
                 .get();
 
             const appointments = appointmentsQuery.docs.map(d => d.data());
 
-            // Özet bilgileri hesapla
-            const pending = appointments.filter(a => a.status === 'pending').length;
-            const completed = appointments.filter(a => a.status === 'completed').length;
-            const cancelled = appointments.filter(a => a.status === 'cancelled').length;
+            // Özet bilgileri Firestore aggregation ile hesapla
+            const [pendingCount, completedCount, cancelledCount] = await Promise.all([
+                appointmentsBaseQuery.where('status', '==', 'pending').count().get(),
+                appointmentsBaseQuery.where('status', '==', 'completed').count().get(),
+                appointmentsBaseQuery.where('status', '==', 'cancelled').count().get(),
+            ]);
 
             return {
                 success: true,
                 scheduleType: 'fixed_dates',
                 appointments,
                 summary: {
-                    total: appointments.length,
-                    pending,
-                    completed,
-                    cancelled
+                    total: appointmentsQuery.size,
+                    pending: pendingCount.data().count,
+                    completed: completedCount.data().count,
+                    cancelled: cancelledCount.data().count,
                 }
             };
 

@@ -1,8 +1,47 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS, serializeTimestamps } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
+
+function toIsoStringIfTimestamp(value: unknown): unknown {
+    if (!value || typeof value !== 'object') {
+        return value;
+    }
+
+    if (value instanceof Date) {
+        return value.toISOString();
+    }
+
+    const maybeTimestamp = value as { toDate?: () => Date };
+    if (typeof maybeTimestamp.toDate === 'function') {
+        return maybeTimestamp.toDate().toISOString();
+    }
+
+    return value;
+}
+
+function normalizeDateFieldsToIso<T>(value: T): T {
+    if (Array.isArray(value)) {
+        return value.map((item) => normalizeDateFieldsToIso(item)) as T;
+    }
+
+    const convertedPrimitive = toIsoStringIfTimestamp(value);
+    if (convertedPrimitive !== value) {
+        return convertedPrimitive as T;
+    }
+
+    if (!value || typeof value !== 'object') {
+        return value;
+    }
+
+    const obj = value as Record<string, unknown>;
+    const normalizedEntries = Object.entries(obj).map(([key, fieldValue]) => [
+        key,
+        normalizeDateFieldsToIso(fieldValue)
+    ]);
+
+    return Object.fromEntries(normalizedEntries) as T;
+}
 
 // Firestore 'in' operatörü max 10 eleman destekler — büyük listeler için chunk'lara bölüp paralel sorgu yap
 async function queryByGymIds(
@@ -51,16 +90,14 @@ export const getPaymentRequests = onCall(async (request) => {
         let rawDocs: FirebaseFirestore.DocumentData[] = [];
 
         if (role === 'coach') {
-            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
-            const coachGymId = coachDoc.data()?.gymId;
+            const coachGymId: string = request.auth.token.gymId || '';
             if (!coachGymId) {
                 throw new HttpsError('failed-precondition', 'Bir spor salonuna atanmamışsınız.');
             }
             rawDocs = await queryByGymIds([coachGymId], status);
 
         } else if (role === 'admin') {
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
 
             if (adminGymIds.length === 0) {
                 return { success: true, paymentRequests: [], count: 0 };
@@ -84,40 +121,15 @@ export const getPaymentRequests = onCall(async (request) => {
             rawDocs = snap.docs.map((d: any) => d.data());
         }
 
-        // Öğrenci bilgilerini tek turda batch ile yükle (N+1 önlemek için db.getAll)
-        const studentIds = [...new Set(rawDocs.map((d) => d.studentId).filter(Boolean))];
-        const studentMap: Record<string, { firstName: string; lastName: string; photoUrl: string }> = {};
+        const paymentRequests = rawDocs.map((rawData) => {
+            const data = normalizeDateFieldsToIso(rawData) as Record<string, any>;
 
-        if (studentIds.length > 0) {
-            const studentRefs = studentIds.map((sid) => db.collection(COLLECTIONS.STUDENTS).doc(sid));
-            const studentDocs = await db.getAll(...studentRefs);
-            studentDocs.forEach((doc) => {
-                if (doc.exists) {
-                    const s = doc.data()!;
-                    studentMap[doc.id] = {
-                        firstName: s.firstName || '',
-                        lastName: s.lastName || '',
-                        photoUrl: s.photoUrl || ''
-                    };
-                }
-            });
-        }
-
-        const paymentRequests = rawDocs.map((data) => {
-            // Tarih alanlarını ISO 8601 string'e çevir (createdAt, processedAt)
-            const serialized = serializeTimestamps(data) as Record<string, any>;
-            const student = studentMap[data.studentId];
             return {
-                ...serialized,
+                ...data,
                 // Frontend'e tutarlı tutar alanı sun
                 amount: data.type === PaymentMethodType.PACKAGE
                     ? data.totalAmount
-                    : data.monthlyAmount,
-                // Öğrenci enrichment — liste ekranında ayrı sorguya gerek kalmaz
-                studentFirstName: student?.firstName || '',
-                studentLastName: student?.lastName || '',
-                studentFullName: student ? `${student.firstName} ${student.lastName}`.trim() : '',
-                studentPhotoUrl: student?.photoUrl || ''
+                    : data.monthlyAmount
             };
         });
 

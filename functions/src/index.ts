@@ -4,7 +4,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount } from "./student";
 import { registerCoach, coachJoinGym, updateCoachProfile, deleteCoachAccount, removeCoachFromGym } from "./coach";
 import { createAdmin, updateAdmin, deleteAdmin, deleteAdminAccount } from "./admin";
-import { registerSuperAdmin } from "./superadmin";
+import { registerSuperAdmin, migrateGymClaims } from "./superadmin";
 import { createGym, updateGym, deleteGym, getGymDetails, addPackage, updatePackage, deletePackage, updateMembershipPlan, addMembershipPlan, deleteMembershipPlan, addAmenity, deleteAmenity } from "./gym";
 import { assignSubscription, getStudentSubscription, useSession, getStudentBalance, cancelSubscription } from "./subscription";
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
@@ -18,7 +18,7 @@ import { sendSessionReminder, getMyNotifications, markNotificationAsRead } from 
 import { gymCheckIn, gymCheckOut } from "./gymPresence";
 
 // Global ayarlar
-setGlobalOptions({ maxInstances: 10 });
+setGlobalOptions({ maxInstances: 10, enforceAppCheck: true });
 
 // Export functions
 export {
@@ -41,6 +41,7 @@ export {
     deleteAdminAccount,
     // SuperAdmin
     registerSuperAdmin,
+    migrateGymClaims,
     // Gym
     createGym,
     updateGym,

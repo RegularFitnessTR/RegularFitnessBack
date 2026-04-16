@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth, COLLECTIONS } from "../../common";
+import { db, auth, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
 import { UpdateAdminData } from "../types/admin.dto";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
@@ -118,6 +117,13 @@ export const updateAdmin = onCall(async (request) => {
         // Firestore güncellemesi varsa uygula
         if (Object.keys(firestoreUpdates).length > 0) {
             await db.collection(COLLECTIONS.ADMINS).doc(data.adminUid).update(firestoreUpdates);
+        }
+
+        // gymIds değiştiyse custom claims'i de güncelle
+        if (data.gymIds !== undefined || data.addGymIds || data.removeGymIds) {
+            const updatedDoc = await db.collection(COLLECTIONS.ADMINS).doc(data.adminUid).get();
+            const newGymIds: string[] = updatedDoc.data()?.gymIds || [];
+            await syncGymClaims(data.adminUid, { gymIds: newGymIds });
         }
 
         // Log kaydı

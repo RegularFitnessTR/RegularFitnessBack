@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription, MembershipSubscription } from "../types/subscription.model";
 import { logError } from "../../log/utils/logError";
@@ -36,8 +35,7 @@ export const getStudentSubscription = onCall(async (request) => {
 
         // Admin sadece kendi salonundaki öğrencilerin aboneliğini görebilir
         if (role === 'admin') {
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!adminGymIds.includes(studentData.gymId)) {
                 throw new HttpsError('permission-denied', 'Bu öğrencinin salonuna erişim yetkiniz yok.');
             }

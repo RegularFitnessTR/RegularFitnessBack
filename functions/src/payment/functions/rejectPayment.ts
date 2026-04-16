@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { ProcessPaymentData } from "../types/payment.dto";
 import { PaymentRequest } from "../types/payment.model";
@@ -41,25 +40,24 @@ export const rejectPayment = onCall(async (request) => {
             throw new HttpsError('failed-precondition', 'Bu ödeme talebi zaten işlenmiş.');
         }
 
-        // 3. Verify authorization
+        // 3. Verify authorization (custom claims'den)
         if (role === 'coach') {
-            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
-            if (coachDoc.data()?.gymId !== payment.gymId) {
+            if ((request.auth.token.gymId || '') !== payment.gymId) {
                 throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini reddedemezsiniz.');
             }
         } else if (role === 'admin') {
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!adminGymIds.includes(payment.gymId)) {
                 throw new HttpsError('permission-denied', 'Bu spor salonunun ödemelerini reddedemezsiniz.');
             }
         }
 
         // 4. Update payment request and student pending count
+        const processedAt = admin.firestore.Timestamp.now();
         const rejectBatch = db.batch();
         rejectBatch.update(db.collection(COLLECTIONS.PAYMENT_REQUESTS).doc(data.paymentRequestId), {
             status: PaymentStatus.REJECTED,
-            processedAt: admin.firestore.Timestamp.now(),
+            processedAt,
             processedBy: request.auth.uid,
             notes: data.notes || 'Ödeme reddedildi.'
         });
@@ -101,7 +99,8 @@ export const rejectPayment = onCall(async (request) => {
 
         return {
             success: true,
-            message: "Ödeme talebi reddedildi."
+            message: "Ödeme talebi reddedildi.",
+            processedAt: processedAt.toDate().toISOString()
         };
 
     } catch (error: any) {

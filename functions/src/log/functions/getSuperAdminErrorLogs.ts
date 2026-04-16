@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { GetErrorLogsData } from "../types/log.dto";
 import { ErrorLog } from "../types/log.model";
 import { logError } from "../utils/logError";

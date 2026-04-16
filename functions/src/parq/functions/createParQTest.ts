@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { ParQTest } from "../types/parq.model";
 import { CreateParQTestData } from "../types/parq.dto";
 import { logActivity } from "../../log/utils/logActivity";
@@ -69,8 +68,7 @@ export const createParQTest = onCall(async (request) => {
         await parqRef.set(newParQTest);
 
         // Log kaydı
-        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth!.uid).get();
-        const coachGymId = coachDoc.data()?.gymId;
+        const coachGymId: string = request.auth!.token.gymId || '';
 
         await logActivity({
             action: LogAction.CREATE_PARQ_TEST,

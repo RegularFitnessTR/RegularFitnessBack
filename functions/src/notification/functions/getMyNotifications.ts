@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { UserRole } from "../../common/types/base";
 import { logError } from "../../log/utils/logError";
 import { GetMyNotificationsData } from "../types/notification.dto";
@@ -27,12 +26,7 @@ export const getMyNotifications = onCall(async (request) => {
                 throw new HttpsError("invalid-argument", "Admin için gymId zorunludur.");
             }
 
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(uid).get();
-            if (!adminDoc.exists) {
-                throw new HttpsError("not-found", "Admin kaydı bulunamadı.");
-            }
-
-            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!adminGymIds.includes(selectedGymId)) {
                 throw new HttpsError("permission-denied", "Bu spor salonuna erişim yetkiniz yok.");
             }

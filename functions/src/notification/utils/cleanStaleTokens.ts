@@ -5,7 +5,12 @@ export const cleanStaleTokens = async (staleTokens: string[]): Promise<void> => 
     if (staleTokens.length === 0) return;
 
     const staleSet = new Set(staleTokens);
-    const collections = [COLLECTIONS.STUDENTS, COLLECTIONS.COACHES, COLLECTIONS.ADMINS];
+    const collections = [
+        COLLECTIONS.STUDENTS,
+        COLLECTIONS.COACHES,
+        COLLECTIONS.ADMINS,
+        COLLECTIONS.SUPERADMINS,
+    ];
 
     // array-contains-any max 10 eleman alır — chunk gerekiyor
     const chunks: string[][] = [];

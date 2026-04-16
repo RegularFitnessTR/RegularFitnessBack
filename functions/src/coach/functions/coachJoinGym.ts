@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
@@ -59,6 +58,9 @@ export const coachJoinGym = onCall(async (request) => {
             gymId: gymDoc.id,
             updatedAt: admin.firestore.Timestamp.now(),
         });
+
+        // Custom claims'e gymId ekle
+        await syncGymClaims(coachUid, { gymId: gymDoc.id });
 
         await logActivity({
             action: LogAction.COACH_JOIN_GYM,

@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { WorkoutSchedule } from "../types/schedule.model";
 import { AssignWorkoutScheduleData } from "../types/schedule.dto";
 import { validateSessions } from "../utils/validation";
@@ -61,8 +60,7 @@ export const assignWorkoutSchedule = onCall(async (request) => {
         }
 
         if (role === 'admin') {
-            const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-            const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!adminGymIds.includes(gymId)) {
                 throw new HttpsError('permission-denied', 'Bu öğrencinin salonuna erişim yetkiniz yok.');
             }

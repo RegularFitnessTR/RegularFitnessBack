@@ -3,6 +3,8 @@
 import * as admin from "firebase-admin";
 import { Message } from "firebase-admin/messaging";
 import { UserRole } from "../../common/types/base";
+import { logError } from "../../log/utils/logError";
+import { LogSeverity } from "../../log/types/log.enums";
 import { getTokensByRole } from "./getTokensByRole";
 import { cleanStaleTokens } from "./cleanStaleTokens";
 
@@ -16,6 +18,44 @@ export interface SendNotificationParams {
     notification: { title: string; body: string };
     data?: Record<string, string>;
     gymId?: string;
+}
+
+const STALE_TOKEN_RETRY_COUNT = 2;
+
+async function cleanStaleTokensWithRetry(staleTokens: string[]): Promise<void> {
+    if (staleTokens.length === 0) return;
+
+    for (let attempt = 1; attempt <= STALE_TOKEN_RETRY_COUNT + 1; attempt++) {
+        try {
+            await cleanStaleTokens(staleTokens);
+            return;
+        } catch (cleanupError) {
+            if (attempt > STALE_TOKEN_RETRY_COUNT) {
+                await logError({
+                    functionName: "sendNotification.cleanStaleTokens",
+                    error: cleanupError,
+                    severity: LogSeverity.ERROR,
+                    requestData: {
+                        staleTokenCount: staleTokens.length,
+                        attempts: attempt,
+                    },
+                });
+                return;
+            }
+
+            await logError({
+                functionName: "sendNotification.cleanStaleTokens.retry",
+                error: cleanupError,
+                severity: LogSeverity.WARNING,
+                requestData: {
+                    staleTokenCount: staleTokens.length,
+                    attempt,
+                },
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, attempt * 200));
+        }
+    }
 }
 
 /**
@@ -72,6 +112,23 @@ export const sendNotification = async (
             const tokenChunk = orderedTokens.slice(i, i + 500);
             const response = await admin.messaging().sendEach(chunk);
 
+            if (response.failureCount > 0) {
+                const errorCodes = response.responses
+                    .map((res) => res.error?.code)
+                    .filter((code): code is string => Boolean(code));
+
+                await logError({
+                    functionName: "sendNotification.sendEach",
+                    error: new Error(`FCM sendEach partial failure: ${response.failureCount}/${chunk.length}`),
+                    severity: LogSeverity.WARNING,
+                    requestData: {
+                        totalMessages: chunk.length,
+                        failureCount: response.failureCount,
+                        errorCodes: [...new Set(errorCodes)],
+                    },
+                });
+            }
+
             response.responses.forEach((res, idx) => {
                 const code = res.error?.code ?? "";
                 if (
@@ -83,15 +140,23 @@ export const sendNotification = async (
             });
         }
 
-        // 4. Bayat token'ları arka planda temizle — ana akışı beklemesin
+        // 4. Bayat token temizliğini retry ile güvenilir hale getir
         if (staleTokens.length > 0) {
-            cleanStaleTokens(staleTokens).catch(err =>
-                console.error("cleanStaleTokens error:", err)
-            );
+            await cleanStaleTokensWithRetry(staleTokens);
         }
 
     } catch (err) {
         // Bildirim hatası ana işlemi (ödeme onayı vb.) asla durdurmamalı
         console.error("sendNotification error:", err);
+
+        await logError({
+            functionName: "sendNotification",
+            error: err,
+            severity: LogSeverity.ERROR,
+            requestData: {
+                recipientGroupCount: params.recipients.length,
+                notificationType: params.data?.type ?? "general",
+            },
+        });
     }
 };

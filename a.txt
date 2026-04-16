@@ -1,0 +1,18 @@
+Backend performans guncellemelerine devam ediyoruz.
+
+Takip dosyasi: /Users/mustafaserhatpeker/projeler/RFİTNESS/backend_updates.md
+Backend kodu: /Users/mustafaserhatpeker/projeler/RFİTNESS/RegularFitnessBack
+iOS kodu (cross-ref icin): /Users/mustafaserhatpeker/projeler/RFİTNESS/RegularFitnessIOS
+
+Kuralllar:
+1. Once backend_updates.md dosyasini oku, kalinan yeri bul
+2. Siradaki "[ ] Bekliyor" durumundaki gorevi al (oncelik sirasi: CRITICAL > HIGH > MEDIUM > LOW)
+3. Ilgili dosyalari oku, degisikligi yap
+4. Test et / dogrula
+5. backend_updates.md'deki gorevi [x] olarak isaretle, tarih ekle
+6. Sohbet gecmisine yapilan islemi yaz
+7. backend_updates.md dosyasına front-end tarafını etkileyebilece degisiklikleri
+yaz
+8. Sonraki goreve gec veya sohbet sonuysa durumu kaydet
+
+Her seferinde tek gorev yap, onayimi al, sonra sonrakine gec.

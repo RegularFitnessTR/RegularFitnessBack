@@ -1,5 +1,4 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
@@ -25,8 +24,7 @@ export const getCoachSchedules = onCall(async (request) => {
                     throw new HttpsError('not-found', 'Hoca bulunamadı.');
                 }
                 const coachGymId = coachDoc.data()?.gymId;
-                const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
-                const adminGymIds: string[] = adminDoc.data()?.gymIds || [];
+                const adminGymIds: string[] = request.auth.token.gymIds || [];
 
                 if (!coachGymId || !adminGymIds.includes(coachGymId)) {
                     throw new HttpsError('permission-denied', 'Bu hocanın salonuna erişim yetkiniz yok.');
@@ -70,13 +68,16 @@ export const getCoachSchedules = onCall(async (request) => {
             const studentIds = [...new Set(snapshot.docs.map(d => d.data().studentId))];
             const studentMap: Record<string, string> = {};
 
-            await Promise.all(studentIds.map(async (sid) => {
-                const sDoc = await db.collection(COLLECTIONS.STUDENTS).doc(sid).get();
-                if (sDoc.exists) {
-                    const s = sDoc.data()!;
-                    studentMap[sid] = `${s.firstName || ''} ${s.lastName || ''}`.trim();
-                }
-            }));
+            if (studentIds.length > 0) {
+                const refs = studentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
+                const docs = await db.getAll(...refs);
+                docs.forEach(doc => {
+                    if (doc.exists) {
+                        const s = doc.data()!;
+                        studentMap[doc.id] = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+                    }
+                });
+            }
 
             const appointments = snapshot.docs.map(doc => ({
                 ...doc.data(),
@@ -110,13 +111,16 @@ export const getCoachSchedules = onCall(async (request) => {
             const studentIds = [...new Set(snapshot.docs.map(d => d.data().studentId))];
             const studentMap: Record<string, string> = {};
 
-            await Promise.all(studentIds.map(async (sid) => {
-                const sDoc = await db.collection(COLLECTIONS.STUDENTS).doc(sid).get();
-                if (sDoc.exists) {
-                    const s = sDoc.data()!;
-                    studentMap[sid] = `${s.firstName || ''} ${s.lastName || ''}`.trim();
-                }
-            }));
+            if (studentIds.length > 0) {
+                const refs = studentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
+                const docs = await db.getAll(...refs);
+                docs.forEach(doc => {
+                    if (doc.exists) {
+                        const s = doc.data()!;
+                        studentMap[doc.id] = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+                    }
+                });
+            }
 
             const schedules = snapshot.docs.map(doc => ({
                 ...doc.data(),

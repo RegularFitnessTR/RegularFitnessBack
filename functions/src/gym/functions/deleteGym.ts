@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
@@ -90,6 +89,16 @@ export const deleteGym = onCall(async (request) => {
             ops.slice(i, i + 499).forEach(fn => fn(extraBatch));
             await extraBatch.commit();
         }
+
+        // Gym silinen admin ve coach'ların custom claims'lerini güncelle
+        const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(request.auth.uid).get();
+        const updatedGymIds: string[] = adminDoc.data()?.gymIds || [];
+        await syncGymClaims(request.auth.uid, { gymIds: updatedGymIds });
+
+        const coachClaimsUpdates = coachesSnap.docs.map(doc =>
+            syncGymClaims(doc.id, { gymId: '' })
+        );
+        await Promise.all(coachClaimsUpdates);
 
         // Log kaydı
         await logActivity({

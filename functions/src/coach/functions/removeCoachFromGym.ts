@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS } from "../../common";
+import { db, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
@@ -61,19 +60,10 @@ export const removeCoachFromGym = onCall(async (request) => {
 
         const gymId = coachData.gymId as string;
 
-        // Admin kendi salonunu yönetip yönetmediğini doğrula
+        // Admin kendi salonunu yönetip yönetmediğini doğrula (custom claims'den)
         if (role === "admin") {
-            const adminDoc = await db
-                .collection(COLLECTIONS.ADMINS)
-                .doc(request.auth.uid)
-                .get();
-
-            if (!adminDoc.exists) {
-                throw new HttpsError("not-found", "Admin kaydı bulunamadı.");
-            }
-
-            const adminData = adminDoc.data()!;
-            if (!(adminData.gymIds as string[])?.includes(gymId)) {
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
+            if (!adminGymIds.includes(gymId)) {
                 throw new HttpsError(
                     "permission-denied",
                     "Bu hoca sizin yönettiğiniz bir salona bağlı değil."
@@ -151,6 +141,9 @@ export const removeCoachFromGym = onCall(async (request) => {
             gymId: "",
             updatedAt: now,
         });
+
+        // Custom claims'den gymId'yi temizle
+        await syncGymClaims(coachUid, { gymId: '' });
 
         await logActivity({
             action: LogAction.REMOVE_COACH_FROM_GYM,

@@ -1,5 +1,6 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { onCall } from "../common";
 
 export const resetPassword = onCall(async (request) => {
     // Check if user is authenticated

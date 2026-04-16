@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth, COLLECTIONS } from "../../common";
+import { db, auth, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { StudentUser } from "../types/student.model";
 import { RegisterStudentData } from "../types/student.dto";
 import { logActivity } from "../../log/utils/logActivity";

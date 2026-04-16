@@ -1,6 +1,5 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { db, auth, COLLECTIONS } from "../../common";
+import { db, auth, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
@@ -14,6 +13,12 @@ import {
 
 // ─── Batch yardımcıları ───────────────────────────────────────────────────────
 
+const BATCH_COMMIT_DELAY_MS = 100;
+
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function deleteBatchQuery(
     query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData>
 ): Promise<void> {
@@ -25,6 +30,9 @@ async function deleteBatchQuery(
         const batch = db.batch();
         chunk.forEach((doc) => batch.delete(doc.ref));
         await batch.commit();
+        if (i + 499 < snapshot.docs.length) {
+            await delay(BATCH_COMMIT_DELAY_MS);
+        }
     }
 }
 
@@ -40,6 +48,9 @@ async function updateBatchQuery(
         const batch = db.batch();
         chunk.forEach((doc) => batch.update(doc.ref, data));
         await batch.commit();
+        if (i + 499 < snapshot.docs.length) {
+            await delay(BATCH_COMMIT_DELAY_MS);
+        }
     }
 }
 
