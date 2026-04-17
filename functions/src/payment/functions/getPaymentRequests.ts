@@ -3,6 +3,29 @@ import { PaymentStatus } from "../types/payment.enums";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
+function mapUnexpectedPaymentError(error: any): HttpsError {
+    const rawCode = String(error?.code ?? '').toLowerCase();
+    const rawMessage = String(error?.message ?? '');
+
+    if (rawCode.includes('failed-precondition') || rawCode === '9') {
+        return new HttpsError('failed-precondition', 'Ödeme sorgusu için gerekli Firestore indexi eksik veya hazır değil.');
+    }
+
+    if (rawCode.includes('permission-denied') || rawCode === '7') {
+        return new HttpsError('permission-denied', 'Ödeme verilerine erişim izni bulunamadı.');
+    }
+
+    if (rawCode.includes('unavailable') || rawCode === '14') {
+        return new HttpsError('unavailable', 'Ödeme servisi geçici olarak kullanılamıyor.');
+    }
+
+    if (/index/i.test(rawMessage) && /create/i.test(rawMessage)) {
+        return new HttpsError('failed-precondition', 'Ödeme sorgusu için gerekli Firestore indexi eksik veya hazır değil.');
+    }
+
+    return new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
+}
+
 // Firestore 'in' operatörü max 10 eleman destekler — büyük listeler için chunk'lara bölüp paralel sorgu yap
 async function queryByGymIds(
     gymIds: string[],
@@ -169,6 +192,6 @@ export const getPaymentRequests = onCall(async (request) => {
             requestData: { status, gymId }
         });
         if (error instanceof HttpsError) throw error;
-        throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
+        throw mapUnexpectedPaymentError(error);
     }
 });
