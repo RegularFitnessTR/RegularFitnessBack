@@ -1,47 +1,7 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
-
-function toIsoStringIfTimestamp(value: unknown): unknown {
-    if (!value || typeof value !== 'object') {
-        return value;
-    }
-
-    if (value instanceof Date) {
-        return value.toISOString();
-    }
-
-    const maybeTimestamp = value as { toDate?: () => Date };
-    if (typeof maybeTimestamp.toDate === 'function') {
-        return maybeTimestamp.toDate().toISOString();
-    }
-
-    return value;
-}
-
-function normalizeDateFieldsToIso<T>(value: T): T {
-    if (Array.isArray(value)) {
-        return value.map((item) => normalizeDateFieldsToIso(item)) as T;
-    }
-
-    const convertedPrimitive = toIsoStringIfTimestamp(value);
-    if (convertedPrimitive !== value) {
-        return convertedPrimitive as T;
-    }
-
-    if (!value || typeof value !== 'object') {
-        return value;
-    }
-
-    const obj = value as Record<string, unknown>;
-    const normalizedEntries = Object.entries(obj).map(([key, fieldValue]) => [
-        key,
-        normalizeDateFieldsToIso(fieldValue)
-    ]);
-
-    return Object.fromEntries(normalizedEntries) as T;
-}
 
 // Firestore 'in' operatörü max 10 eleman destekler — büyük listeler için chunk'lara bölüp paralel sorgu yap
 async function queryByGymIds(
@@ -121,15 +81,44 @@ export const getPaymentRequests = onCall(async (request) => {
             rawDocs = snap.docs.map((d: any) => d.data());
         }
 
+        // Student enrichment: unique studentId'leri tek batch ile oku → N+1 kapat
+        const uniqueStudentIds = [...new Set(
+            rawDocs.map((d) => d.studentId).filter((id): id is string => typeof id === 'string' && id.length > 0)
+        )];
+
+        const studentMap: Record<string, { firstName: string; lastName: string; photoUrl: string | null }> = {};
+        if (uniqueStudentIds.length > 0) {
+            const refs = uniqueStudentIds.map((sid) => db.collection(COLLECTIONS.STUDENTS).doc(sid));
+            const studentDocs = await db.getAll(...refs);
+            studentDocs.forEach((doc) => {
+                if (doc.exists) {
+                    const s = doc.data()!;
+                    studentMap[doc.id] = {
+                        firstName: s.firstName || '',
+                        lastName: s.lastName || '',
+                        photoUrl: s.photoUrl || null
+                    };
+                }
+            });
+        }
+
         const paymentRequests = rawDocs.map((rawData) => {
-            const data = normalizeDateFieldsToIso(rawData) as Record<string, any>;
+            const data = serializeTimestamps(rawData) as Record<string, any>;
+            const student = studentMap[data.studentId];
+            const firstName = student?.firstName ?? '';
+            const lastName = student?.lastName ?? '';
 
             return {
                 ...data,
                 // Frontend'e tutarlı tutar alanı sun
                 amount: data.type === PaymentMethodType.PACKAGE
                     ? data.totalAmount
-                    : data.monthlyAmount
+                    : data.monthlyAmount,
+                // Student enrichment (N+1 önlemek için)
+                studentFirstName: firstName,
+                studentLastName: lastName,
+                studentFullName: `${firstName} ${lastName}`.trim(),
+                studentPhotoUrl: student?.photoUrl ?? null
             };
         });
 

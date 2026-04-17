@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, toIso } from "../../common";
 import { PaymentStatus } from "../types/payment.enums";
 import { ProcessPaymentData } from "../types/payment.dto";
 import { PaymentRequest } from "../types/payment.model";
@@ -100,7 +100,7 @@ export const rejectPayment = onCall(async (request) => {
         return {
             success: true,
             message: "Ödeme talebi reddedildi.",
-            processedAt: processedAt.toDate().toISOString()
+            processedAt: toIso(processedAt)
         };
 
     } catch (error: any) {

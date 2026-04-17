@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, toIso } from "../../common";
 import { PackagePaymentRequest, MembershipPaymentRequest } from "../types/payment.model";
 import { PaymentStatus } from "../types/payment.enums";
 import { CreatePackagePaymentData, CreateMembershipPaymentData } from "../types/payment.dto";
@@ -193,7 +193,7 @@ export const createPaymentRequest = onCall(async (request) => {
             success: true,
             message: "Ödeme talebiniz oluşturuldu. Hoca veya admin onayı bekleniyor.",
             paymentRequestId: paymentId,
-            createdAt: newPaymentRequest.createdAt.toDate().toISOString(),
+            createdAt: toIso(newPaymentRequest.createdAt),
             totalAmount: newPaymentRequest.type === PaymentMethodType.PACKAGE
                 ? (newPaymentRequest as PackagePaymentRequest).totalAmount
                 : (newPaymentRequest as MembershipPaymentRequest).monthlyAmount

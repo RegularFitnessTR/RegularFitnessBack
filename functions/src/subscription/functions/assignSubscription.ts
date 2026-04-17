@@ -129,16 +129,6 @@ export const assignSubscription = onCall(async (request) => {
             throw new HttpsError('failed-precondition', 'Bu salona ödeme yöntemi tanımlanmamış.');
         }
 
-        // 5. Mevcut aktif abonelik kontrolü
-        const existingSubQuery = await db.collection(COLLECTIONS.SUBSCRIPTIONS)
-            .where('studentId', '==', data.studentId)
-            .where('status', '==', SubscriptionStatus.ACTIVE)
-            .get();
-
-        if (!existingSubQuery.empty) {
-            throw new HttpsError('already-exists', 'Bu öğrencinin zaten aktif bir aboneliği var.');
-        }
-
         const subscriptionRef = db.collection(COLLECTIONS.SUBSCRIPTIONS).doc();
         const subscriptionId = subscriptionRef.id;
         const now = admin.firestore.Timestamp.now();
@@ -259,17 +249,23 @@ export const assignSubscription = onCall(async (request) => {
             } as MembershipSubscription;
         }
 
-        // 7. Batch write
-        const batch = db.batch();
+        // 7. Transaction: active sub re-check + write atomik
+        await db.runTransaction(async (tx) => {
+            const existingSubs = await tx.get(
+                db.collection(COLLECTIONS.SUBSCRIPTIONS)
+                    .where('studentId', '==', data.studentId)
+                    .where('status', '==', SubscriptionStatus.ACTIVE)
+            );
+            if (!existingSubs.empty) {
+                throw new HttpsError('already-exists', 'Bu öğrencinin zaten aktif bir aboneliği var.');
+            }
 
-        batch.set(subscriptionRef, newSubscription);
-
-        batch.update(db.collection(COLLECTIONS.STUDENTS).doc(data.studentId), {
-            activeSubscriptionId: subscriptionId,
-            updatedAt: now
+            tx.set(subscriptionRef, newSubscription);
+            tx.update(db.collection(COLLECTIONS.STUDENTS).doc(data.studentId), {
+                activeSubscriptionId: subscriptionId,
+                updatedAt: now
+            });
         });
-
-        await batch.commit();
 
         // 8. Sistem eventi yaz (bildirim altyapısı için)
         await writeSystemEvent(

@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription, MembershipSubscription } from "../types/subscription.model";
 import { logError } from "../../log/utils/logError";
@@ -67,10 +67,10 @@ export const getStudentSubscription = onCall(async (request) => {
 
             return {
                 success: true,
-                subscription: {
+                subscription: serializeTimestamps({
                     ...packageSub,
                     appointments
-                }
+                })
             };
 
         } else {
@@ -88,7 +88,7 @@ export const getStudentSubscription = onCall(async (request) => {
 
             return {
                 success: true,
-                subscription: {
+                subscription: serializeTimestamps({
                     ...membershipSub,
                     // Hesaplanan ek alanlar
                     commitmentDaysRemaining: Math.max(0, commitmentDaysRemaining),
@@ -96,7 +96,7 @@ export const getStudentSubscription = onCall(async (request) => {
                     effectiveMonthlyPrice: membershipSub.isCommitmentActive
                         ? membershipSub.monthlyPrice
                         : membershipSub.baseMonthlyPrice
-                }
+                })
             };
         }
 

@@ -10,3 +10,4 @@ export * from './utils/qrcode';
 export * from './utils/syncGymClaims';
 export * from './utils/rateLimit';
 export * from './utils/onCall';
+export * from './utils/serialize';

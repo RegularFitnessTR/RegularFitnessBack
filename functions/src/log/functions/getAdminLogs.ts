@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { GetLogsData } from "../types/log.dto";
 import { ActivityLog } from "../types/log.model";
 import { logError } from "../utils/logError";
@@ -82,7 +82,7 @@ export const getAdminLogs = onCall(async (request) => {
         const snapshot = await query.get();
 
         const logs: ActivityLog[] = snapshot.docs.map(doc => doc.data() as ActivityLog);
-        const formattedLogs = logs.map(mapLogForResponse);
+        const formattedLogs = logs.map(mapLogForResponse).map(log => serializeTimestamps(log));
 
         return {
             success: true,

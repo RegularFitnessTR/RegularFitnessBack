@@ -40,6 +40,12 @@ export const createAppointments = onCall(async (request) => {
     if (!data.appointments || data.appointments.length === 0) {
         throw new HttpsError('invalid-argument', 'En az bir randevu girilmelidir.');
     }
+    if (data.appointments.length > 500) {
+        throw new HttpsError(
+            'invalid-argument',
+            'Tek seferde en fazla 500 randevu oluşturulabilir. Lütfen paketi daha küçük parçalara bölün.'
+        );
+    }
 
     // Tarih formatı ve startTime/endTime kontrolü
     const todayStart = new Date();
@@ -78,75 +84,74 @@ export const createAppointments = onCall(async (request) => {
             throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
         }
 
-        // 3. Aboneliği getir ve doğrula
-        const subDoc = await db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(data.subscriptionId).get();
-        if (!subDoc.exists) {
-            throw new HttpsError('not-found', 'Abonelik bulunamadı.');
-        }
-        const sub = subDoc.data() as PackageSubscription;
-
-        if (sub.studentId !== data.studentId) {
-            throw new HttpsError('invalid-argument', 'Abonelik bu öğrenciye ait değil.');
-        }
-        if (sub.type !== PaymentMethodType.PACKAGE) {
-            throw new HttpsError(
-                'failed-precondition',
-                'Randevu sistemi sadece paket bazlı abonelikler için kullanılabilir.'
-            );
-        }
-        if (sub.status !== SubscriptionStatus.ACTIVE) {
-            throw new HttpsError('failed-precondition', 'Abonelik aktif değil.');
-        }
-
-        // 4. Seans sayısı kontrolü — tam olarak eşit olmalı
-        const totalSessions = sub.totalSessions;
-        const incomingCount = data.appointments.length;
-
-        // Mevcut randevuları say (iptal olmayanlar)
-        const existingAptQuery = await db.collection(COLLECTIONS.APPOINTMENTS)
-            .where('subscriptionId', '==', data.subscriptionId)
-            .where('status', 'in', ['pending', 'completed', 'postponed'])
-            .get();
-
-        const existingCount = existingAptQuery.size;
-        const allowedCount = totalSessions - existingCount;
-
-        if (incomingCount !== allowedCount) {
-            throw new HttpsError(
-                'invalid-argument',
-                `Bu paket için ${totalSessions} seans planlanmalıdır. ` +
-                `Mevcut: ${existingCount}, Eklenecek: ${incomingCount}, ` +
-                `Gereken: ${allowedCount}. Lütfen tam olarak ${allowedCount} randevu girin.`
-            );
-        }
-
-        // 5. Batch ile randevuları yaz
-        const batch = db.batch();
+        // 3-5. Transaction: sub re-read + existing count + writes atomik
         const now = admin.firestore.Timestamp.now();
-        const gymId: string = sub.gymId;
+        const incomingCount = data.appointments.length;
+        let gymId = '';
 
-        data.appointments.forEach((apt, index) => {
-            const aptRef = db.collection(COLLECTIONS.APPOINTMENTS).doc();
-            const newAppointment: Appointment = {
-                id: aptRef.id,
-                studentId: data.studentId,
-                coachId: sub.coachId,
-                gymId,
-                subscriptionId: data.subscriptionId,
-                sessionNumber: existingCount + index + 1,
-                totalSessions,
-                date: admin.firestore.Timestamp.fromDate(new Date(apt.date)),
-                startTime: apt.startTime,
-                endTime: apt.endTime,
-                description: apt.description,
-                status: 'pending',
-                createdBy: request.auth!.uid,
-                createdAt: now
-            };
-            batch.set(aptRef, newAppointment);
+        await db.runTransaction(async (tx) => {
+            const subDoc = await tx.get(
+                db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(data.subscriptionId)
+            );
+            if (!subDoc.exists) {
+                throw new HttpsError('not-found', 'Abonelik bulunamadı.');
+            }
+            const sub = subDoc.data() as PackageSubscription;
+
+            if (sub.studentId !== data.studentId) {
+                throw new HttpsError('invalid-argument', 'Abonelik bu öğrenciye ait değil.');
+            }
+            if (sub.type !== PaymentMethodType.PACKAGE) {
+                throw new HttpsError(
+                    'failed-precondition',
+                    'Randevu sistemi sadece paket bazlı abonelikler için kullanılabilir.'
+                );
+            }
+            if (sub.status !== SubscriptionStatus.ACTIVE) {
+                throw new HttpsError('failed-precondition', 'Abonelik aktif değil.');
+            }
+
+            const totalSessions = sub.totalSessions;
+            gymId = sub.gymId;
+
+            const existingAptSnap = await tx.get(
+                db.collection(COLLECTIONS.APPOINTMENTS)
+                    .where('subscriptionId', '==', data.subscriptionId)
+                    .where('status', 'in', ['pending', 'completed', 'postponed'])
+            );
+            const existingCount = existingAptSnap.size;
+            const allowedCount = totalSessions - existingCount;
+
+            if (incomingCount !== allowedCount) {
+                throw new HttpsError(
+                    'invalid-argument',
+                    `Bu paket için ${totalSessions} seans planlanmalıdır. ` +
+                    `Mevcut: ${existingCount}, Eklenecek: ${incomingCount}, ` +
+                    `Gereken: ${allowedCount}. Lütfen tam olarak ${allowedCount} randevu girin.`
+                );
+            }
+
+            data.appointments.forEach((apt, index) => {
+                const aptRef = db.collection(COLLECTIONS.APPOINTMENTS).doc();
+                const newAppointment: Appointment = {
+                    id: aptRef.id,
+                    studentId: data.studentId,
+                    coachId: sub.coachId,
+                    gymId,
+                    subscriptionId: data.subscriptionId,
+                    sessionNumber: existingCount + index + 1,
+                    totalSessions,
+                    date: admin.firestore.Timestamp.fromDate(new Date(apt.date)),
+                    startTime: apt.startTime,
+                    endTime: apt.endTime,
+                    description: apt.description,
+                    status: 'pending',
+                    createdBy: request.auth!.uid,
+                    createdAt: now
+                };
+                tx.set(aptRef, newAppointment);
+            });
         });
-
-        await batch.commit();
 
         await logActivity({
             action: LogAction.ASSIGN_WORKOUT_SCHEDULE,

@@ -99,6 +99,7 @@ export const updateAppointmentsPlan = onCall(async (request) => {
         const existingAppointments = await db.collection(COLLECTIONS.APPOINTMENTS)
             .where('subscriptionId', '==', data.subscriptionId)
             .orderBy('sessionNumber', 'asc')
+            .select('status', 'sessionNumber')
             .get();
 
         const completedAppointments = existingAppointments.docs.filter(
@@ -131,6 +132,15 @@ export const updateAppointmentsPlan = onCall(async (request) => {
                 'invalid-argument',
                 `Bu paket için kalan ${availableSessionNumbers.length} seans planlanmalıdır. ` +
                 `Gönderilen: ${data.appointments.length}.`
+            );
+        }
+
+        const totalBatchOps = editableAppointments.length + data.appointments.length;
+        if (totalBatchOps > 500) {
+            throw new HttpsError(
+                'failed-precondition',
+                `Toplu güncelleme için Firestore batch limiti (500) aşıldı. ` +
+                `Silinecek: ${editableAppointments.length}, Eklenecek: ${data.appointments.length}, Toplam: ${totalBatchOps}.`
             );
         }
 

@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
@@ -17,29 +17,23 @@ export const getCoachSchedules = onCall(async (request) => {
                 throw new HttpsError('invalid-argument', 'Hoca ID belirtilmesi zorunludur.');
             }
             coachId = data.coachId;
-
-            if (role === 'admin') {
-                const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
-                if (!coachDoc.exists) {
-                    throw new HttpsError('not-found', 'Hoca bulunamadı.');
-                }
-                const coachGymId = coachDoc.data()?.gymId;
-                const adminGymIds: string[] = request.auth.token.gymIds || [];
-
-                if (!coachGymId || !adminGymIds.includes(coachGymId)) {
-                    throw new HttpsError('permission-denied', 'Bu hocanın salonuna erişim yetkiniz yok.');
-                }
-            }
         } else if (role !== 'coach') {
             throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
         }
 
-        // Hocanın gym bilgisini al → salon tipini belirle
+        // Hocanın gym bilgisini al → salon tipini belirle + admin yetki kontrolü
         const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
         if (!coachDoc.exists) {
             throw new HttpsError('not-found', 'Hoca bulunamadı.');
         }
         const gymId: string = coachDoc.data()?.gymId;
+
+        if (role === 'admin') {
+            const adminGymIds: string[] = request.auth.token.gymIds || [];
+            if (!gymId || !adminGymIds.includes(gymId)) {
+                throw new HttpsError('permission-denied', 'Bu hocanın salonuna erişim yetkiniz yok.');
+            }
+        }
 
         if (!gymId) {
             throw new HttpsError('failed-precondition', 'Hoca bir salona atanmamış.');
@@ -80,7 +74,7 @@ export const getCoachSchedules = onCall(async (request) => {
             }
 
             const appointments = snapshot.docs.map(doc => ({
-                ...doc.data(),
+                ...(serializeTimestamps(doc.data()) as Record<string, any>),
                 id: doc.id,
                 studentName: studentMap[doc.data().studentId] || ''
             }));
@@ -123,7 +117,7 @@ export const getCoachSchedules = onCall(async (request) => {
             }
 
             const schedules = snapshot.docs.map(doc => ({
-                ...doc.data(),
+                ...(serializeTimestamps(doc.data()) as Record<string, any>),
                 id: doc.id,
                 studentName: studentMap[doc.data().studentId] || ''
             }));

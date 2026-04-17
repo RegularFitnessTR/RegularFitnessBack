@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
@@ -64,7 +64,7 @@ export const getStudentSchedule = onCall(async (request) => {
                 .orderBy('sessionNumber', 'asc')
                 .get();
 
-            const appointments = appointmentsQuery.docs.map(d => d.data());
+            const appointments = appointmentsQuery.docs.map(d => serializeTimestamps(d.data()));
 
             // Özet bilgileri Firestore aggregation ile hesapla
             const [pendingCount, completedCount, cancelledCount] = await Promise.all([
@@ -105,7 +105,7 @@ export const getStudentSchedule = onCall(async (request) => {
             return {
                 success: true,
                 scheduleType: 'weekly_recurring',
-                schedule: scheduleQuery.docs[0].data()
+                schedule: serializeTimestamps(scheduleQuery.docs[0].data())
             };
         }
 

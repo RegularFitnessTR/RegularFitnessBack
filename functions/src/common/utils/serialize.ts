@@ -8,6 +8,26 @@ import * as admin from "firebase-admin";
  * `{ _seconds, _nanoseconds }` olarak gider ve her client'ın ayrı parse akışı
  * gerekir. ISO 8601 string ile `new Date(iso)` veya `ISO8601DateFormatter` yeter.
  */
+/**
+ * Tek bir Timestamp / Date değerini ISO 8601 string'e çevirir.
+ * Null/undefined gelirse null döner — response alanlarında kullanım için güvenli.
+ */
+export function toIso(value: unknown): string | null {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (value instanceof admin.firestore.Timestamp) {
+        return value.toDate().toISOString();
+    }
+
+    if (value instanceof Date) {
+        return value.toISOString();
+    }
+
+    return null;
+}
+
 export function serializeTimestamps<T = any>(value: T): T {
     if (value === null || value === undefined) {
         return value;

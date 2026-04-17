@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { UserRole } from "../../common/types/base";
 import { logError } from "../../log/utils/logError";
 import { GetMyNotificationsData } from "../types/notification.dto";
@@ -57,7 +57,7 @@ export const getMyNotifications = onCall(async (request) => {
             unreadQuery.get()
         ]);
 
-        const notifications = listSnapshot.docs.map((doc) => doc.data());
+        const notifications = listSnapshot.docs.map((doc) => serializeTimestamps(doc.data()));
 
         return {
             success: true,
