@@ -19,7 +19,6 @@ async function canAccessGymByRole(request: any, gymId: string): Promise<boolean>
             return true;
         }
 
-        // Token claim stale/eksik olabilir; role koleksiyonundaki güncel gymId ile fallback doğrula.
         const collection = role === 'coach' ? COLLECTIONS.COACHES : COLLECTIONS.STUDENTS;
         const userDoc = await db.collection(collection).doc(request.auth.uid).get();
         if (!userDoc.exists) {
