@@ -80,7 +80,8 @@ export const registerStudent = onCall(async (request) => {
         // 2. Set custom claims for student role
         await auth.setCustomUserClaims(userRecord.uid, {
             role: 'student',
-            student: true
+            student: true,
+            ...(resolvedGymId ? { gymId: resolvedGymId } : {})
         });
 
         // 3. Create Firestore document in students collection

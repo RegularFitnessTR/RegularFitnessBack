@@ -40,8 +40,8 @@ export const getPaymentRequests = onCall(async (request) => {
     }
 
     const { role } = request.auth.token;
-    if (role !== 'coach' && role !== 'admin' && role !== 'superadmin') {
-        throw new HttpsError('permission-denied', 'Bu işlem için hoca veya admin yetkisi gereklidir.');
+    if (role !== 'student' && role !== 'coach' && role !== 'admin' && role !== 'superadmin') {
+        throw new HttpsError('permission-denied', 'Bu işlem için uygun rol yetkisi gereklidir.');
     }
 
     const { status, gymId } = request.data as { status?: PaymentStatus; gymId?: string };
@@ -49,7 +49,23 @@ export const getPaymentRequests = onCall(async (request) => {
     try {
         let rawDocs: FirebaseFirestore.DocumentData[] = [];
 
-        if (role === 'coach') {
+        if (role === 'student') {
+            // Öğrenci yalnızca kendi ödeme taleplerini görüntüleyebilir.
+            const snapshot = await db.collection(COLLECTIONS.PAYMENT_REQUESTS)
+                .where('studentId', '==', request.auth.uid)
+                .get();
+
+            rawDocs = snapshot.docs.map((d: any) => d.data());
+            if (status) {
+                rawDocs = rawDocs.filter((d) => d.status === status);
+            }
+            rawDocs.sort((a, b) => {
+                const aMs = typeof a?.createdAt?.toMillis === 'function' ? a.createdAt.toMillis() : 0;
+                const bMs = typeof b?.createdAt?.toMillis === 'function' ? b.createdAt.toMillis() : 0;
+                return bMs - aMs;
+            });
+
+        } else if (role === 'coach') {
             const coachGymId: string = request.auth.token.gymId || '';
             if (!coachGymId) {
                 throw new HttpsError('failed-precondition', 'Bir spor salonuna atanmamışsınız.');

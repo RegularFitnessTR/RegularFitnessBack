@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, syncGymClaims } from "../../common";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";
@@ -53,6 +53,19 @@ export const joinGym = onCall(async (request) => {
             gymId: gymDoc.id,
             updatedAt: admin.firestore.Timestamp.now()
         });
+
+        // Student token'ında gymId claim'i yok/eskimiş olabilir; best-effort senkronla.
+        try {
+            await syncGymClaims(studentId, { gymId: gymDoc.id });
+        } catch (claimError: any) {
+            await logError({
+                functionName: 'joinGym.syncGymClaims',
+                error: claimError,
+                userId: request.auth?.uid,
+                userRole: request.auth?.token?.role,
+                requestData: { gymPublicId, resolvedGymId: gymDoc.id }
+            });
+        }
 
         // Log kaydı
         await logActivity({
