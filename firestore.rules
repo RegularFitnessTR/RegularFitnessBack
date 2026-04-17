@@ -6,6 +6,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // iOS NotificationService direct write uyumu:
+    // Sadece owner kullanıcı, yalnızca fcmTokens ve updatedAt alanlarını güncelleyebilir.
+    function isOwnFcmTokenUpdate(uid) {
+      return isOwner(uid)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['fcmTokens', 'updatedAt']);
+    }
+
     function isAppointmentOwner() {
       return resource.data.studentId == request.auth.uid ||
         resource.data.coachId == request.auth.uid;
@@ -20,23 +31,27 @@ service cloud.firestore {
 
     // N-9.1: Kullanıcı kendi profil dokümanını dinleyebilsin.
     match /admins/{uid} {
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if false;
+      allow read: if isOwner(uid);
+      allow update: if isOwnFcmTokenUpdate(uid);
+      allow create, delete: if false;
     }
 
     match /coaches/{uid} {
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if false;
+      allow read: if isOwner(uid);
+      allow update: if isOwnFcmTokenUpdate(uid);
+      allow create, delete: if false;
     }
 
     match /students/{uid} {
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if false;
+      allow read: if isOwner(uid);
+      allow update: if isOwnFcmTokenUpdate(uid);
+      allow create, delete: if false;
     }
 
     match /superadmins/{uid} {
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if false;
+      allow read: if isOwner(uid);
+      allow update: if isOwnFcmTokenUpdate(uid);
+      allow create, delete: if false;
     }
 
     // Varsayilan olarak tum diger koleksiyonlar client tarafina kapali.
