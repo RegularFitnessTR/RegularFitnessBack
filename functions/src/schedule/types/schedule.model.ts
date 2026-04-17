@@ -12,7 +12,9 @@ export interface WorkoutSession {
 export interface WorkoutSchedule {
     id: string;
     studentId: string;
+    studentName?: string; // denormalized display field
     coachId?: string;    // klasik salonda zorunlu değil, öğrenci de oluşturabilir
+    coachName?: string;  // denormalized display field
     gymId: string;
 
     programName: string;
@@ -34,7 +36,9 @@ export type AppointmentStatus = 'pending' | 'completed' | 'postponed' | 'cancell
 export interface Appointment {
     id: string;
     studentId: string;
+    studentName?: string; // denormalized display field
     coachId: string;
+    coachName?: string;   // denormalized display field
     gymId: string;
     subscriptionId: string;  // hangi pakete bağlı
 

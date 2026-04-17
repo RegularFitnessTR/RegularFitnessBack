@@ -44,6 +44,8 @@ export const assignWorkoutSchedule = onCall(async (request) => {
         }
         const studentData = studentDoc.data()!;
         const gymId: string = studentData.gymId;
+        const studentName = `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim();
+        let coachName = '';
 
         if (!gymId) {
             throw new HttpsError('failed-precondition', 'Öğrenci bir salona atanmamış.');
@@ -63,6 +65,14 @@ export const assignWorkoutSchedule = onCall(async (request) => {
             const adminGymIds: string[] = request.auth.token.gymIds || [];
             if (!adminGymIds.includes(gymId)) {
                 throw new HttpsError('permission-denied', 'Bu öğrencinin salonuna erişim yetkiniz yok.');
+            }
+        }
+
+        if (studentData.coachId) {
+            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(studentData.coachId).get();
+            if (coachDoc.exists) {
+                const coachData = coachDoc.data()!;
+                coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
             }
         }
 
@@ -100,7 +110,9 @@ export const assignWorkoutSchedule = onCall(async (request) => {
         const newSchedule: WorkoutSchedule = {
             id: scheduleId,
             studentId: data.studentId,
+            studentName,
             coachId: studentData.coachId || undefined,
+            coachName: coachName || undefined,
             gymId,
             programName: data.programName.trim(),
             programType: data.programType,

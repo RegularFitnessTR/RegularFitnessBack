@@ -78,10 +78,20 @@ export const createAppointments = onCall(async (request) => {
             throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
         }
         const studentData = studentDoc.data()!;
+        const studentName = `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim();
+        let coachName = '';
 
         // 2. Yetki kontrolü
         if (role === 'coach' && studentData.coachId !== request.auth.uid) {
             throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
+        }
+
+        if (studentData.coachId) {
+            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(studentData.coachId).get();
+            if (coachDoc.exists) {
+                const coachData = coachDoc.data()!;
+                coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+            }
         }
 
         // 3-5. Transaction: sub re-read + existing count + writes atomik
@@ -111,6 +121,14 @@ export const createAppointments = onCall(async (request) => {
                 throw new HttpsError('failed-precondition', 'Abonelik aktif değil.');
             }
 
+            if (!coachName && sub.coachId) {
+                const coachDoc = await tx.get(db.collection(COLLECTIONS.COACHES).doc(sub.coachId));
+                if (coachDoc.exists) {
+                    const coachData = coachDoc.data()!;
+                    coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                }
+            }
+
             const totalSessions = sub.totalSessions;
             gymId = sub.gymId;
 
@@ -136,7 +154,9 @@ export const createAppointments = onCall(async (request) => {
                 const newAppointment: Appointment = {
                     id: aptRef.id,
                     studentId: data.studentId,
+                    studentName,
                     coachId: sub.coachId,
+                    coachName: coachName || undefined,
                     gymId,
                     subscriptionId: data.subscriptionId,
                     sessionNumber: existingCount + index + 1,

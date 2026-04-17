@@ -72,6 +72,7 @@ export const updateAppointmentsPlan = onCall(async (request) => {
             throw new HttpsError('not-found', 'Öğrenci bulunamadı.');
         }
         const studentData = studentDoc.data()!;
+        const studentName = `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim();
 
         if (role === 'coach' && studentData.coachId !== request.auth.uid) {
             throw new HttpsError('permission-denied', 'Bu öğrenci size atanmamış.');
@@ -94,6 +95,15 @@ export const updateAppointmentsPlan = onCall(async (request) => {
         }
         if (sub.status !== SubscriptionStatus.ACTIVE) {
             throw new HttpsError('failed-precondition', 'Abonelik aktif değil.');
+        }
+
+        let coachName = '';
+        if (sub.coachId) {
+            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(sub.coachId).get();
+            if (coachDoc.exists) {
+                const coachData = coachDoc.data()!;
+                coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+            }
         }
 
         const existingAppointments = await db.collection(COLLECTIONS.APPOINTMENTS)
@@ -154,7 +164,9 @@ export const updateAppointmentsPlan = onCall(async (request) => {
             const newAppointment: Appointment = {
                 id: aptRef.id,
                 studentId: data.studentId,
+                studentName,
                 coachId: sub.coachId,
+                coachName: coachName || undefined,
                 gymId: sub.gymId,
                 subscriptionId: data.subscriptionId,
                 sessionNumber: availableSessionNumbers[index],

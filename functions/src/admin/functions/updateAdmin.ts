@@ -32,6 +32,18 @@ export const updateAdmin = onCall(async (request) => {
         throw new HttpsError('permission-denied', 'Kendi gym yetkilerinizi değiştiremezsiniz. Bu işlem için Superadmin ile iletişime geçiniz.');
     }
 
+    const hasReplaceGymIds = data.gymIds !== undefined;
+    const hasAddGymIds = (data.addGymIds?.length || 0) > 0;
+    const hasRemoveGymIds = (data.removeGymIds?.length || 0) > 0;
+
+    if (hasReplaceGymIds && (hasAddGymIds || hasRemoveGymIds)) {
+        throw new HttpsError('invalid-argument', 'gymIds ile addGymIds/removeGymIds aynı istekte kullanılamaz.');
+    }
+
+    if (hasAddGymIds && hasRemoveGymIds) {
+        throw new HttpsError('invalid-argument', 'addGymIds ve removeGymIds aynı istekte kullanılamaz.');
+    }
+
     try {
         // 2. Query from admins collection
         const adminDoc = await db.collection(COLLECTIONS.ADMINS).doc(data.adminUid).get();
@@ -101,16 +113,15 @@ export const updateAdmin = onCall(async (request) => {
 
         // GymIds management - three modes (mutually exclusive for gymIds field):
         // 1. Replace all gymIds
-        if (data.gymIds !== undefined) {
+        if (hasReplaceGymIds) {
             firestoreUpdates.gymIds = data.gymIds;
-        // 2. Add specific gymIds (using arrayUnion)
-        } else if (data.addGymIds && data.addGymIds.length > 0) {
-            firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayUnion(...data.addGymIds);
-        // 3. Remove specific gymIds (using arrayRemove)
-        } else if (data.removeGymIds && data.removeGymIds.length > 0) {
-            firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayRemove(...data.removeGymIds);
+            // 2. Add specific gymIds (using arrayUnion)
+        } else if (hasAddGymIds) {
+            firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayUnion(...data.addGymIds!);
+            // 3. Remove specific gymIds (using arrayRemove)
+        } else if (hasRemoveGymIds) {
+            firestoreUpdates.gymIds = admin.firestore.FieldValue.arrayRemove(...data.removeGymIds!);
         }
-        // addGymIds ve removeGymIds aynı anda gönderilemez — caller iki ayrı çağrı yapmalı.
 
         firestoreUpdates.updatedAt = admin.firestore.Timestamp.now();
 
@@ -120,7 +131,7 @@ export const updateAdmin = onCall(async (request) => {
         }
 
         // gymIds değiştiyse custom claims'i de güncelle
-        if (data.gymIds !== undefined || data.addGymIds || data.removeGymIds) {
+        if (hasReplaceGymIds || hasAddGymIds || hasRemoveGymIds) {
             const updatedDoc = await db.collection(COLLECTIONS.ADMINS).doc(data.adminUid).get();
             const newGymIds: string[] = updatedDoc.data()?.gymIds || [];
             await syncGymClaims(data.adminUid, { gymIds: newGymIds });

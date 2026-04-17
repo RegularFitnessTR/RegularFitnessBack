@@ -58,12 +58,18 @@ export const getCoachSchedules = onCall(async (request) => {
                 };
             }
 
-            // Öğrenci isimlerini getir
-            const studentIds = [...new Set(snapshot.docs.map(d => d.data().studentId))];
+            // Yeni kayıtlarda denormalize studentName var; sadece eksik eski kayıtlar için lookup yap
+            const missingStudentIds = [...new Set(
+                snapshot.docs
+                    .map((d) => d.data())
+                    .filter((d) => !(typeof d.studentName === 'string' && d.studentName.trim().length > 0))
+                    .map((d) => d.studentId)
+                    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+            )];
             const studentMap: Record<string, string> = {};
 
-            if (studentIds.length > 0) {
-                const refs = studentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
+            if (missingStudentIds.length > 0) {
+                const refs = missingStudentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
                 const docs = await db.getAll(...refs);
                 docs.forEach(doc => {
                     if (doc.exists) {
@@ -76,7 +82,10 @@ export const getCoachSchedules = onCall(async (request) => {
             const appointments = snapshot.docs.map(doc => ({
                 ...(serializeTimestamps(doc.data()) as Record<string, any>),
                 id: doc.id,
-                studentName: studentMap[doc.data().studentId] || ''
+                studentName:
+                    (typeof doc.data().studentName === 'string' && doc.data().studentName.trim().length > 0)
+                        ? doc.data().studentName
+                        : (studentMap[doc.data().studentId] || '')
             }));
 
             return {
@@ -101,12 +110,18 @@ export const getCoachSchedules = onCall(async (request) => {
                 };
             }
 
-            // Öğrenci isimlerini getir
-            const studentIds = [...new Set(snapshot.docs.map(d => d.data().studentId))];
+            // Yeni kayıtlarda denormalize studentName var; sadece eksik eski kayıtlar için lookup yap
+            const missingStudentIds = [...new Set(
+                snapshot.docs
+                    .map((d) => d.data())
+                    .filter((d) => !(typeof d.studentName === 'string' && d.studentName.trim().length > 0))
+                    .map((d) => d.studentId)
+                    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+            )];
             const studentMap: Record<string, string> = {};
 
-            if (studentIds.length > 0) {
-                const refs = studentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
+            if (missingStudentIds.length > 0) {
+                const refs = missingStudentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
                 const docs = await db.getAll(...refs);
                 docs.forEach(doc => {
                     if (doc.exists) {
@@ -119,7 +134,10 @@ export const getCoachSchedules = onCall(async (request) => {
             const schedules = snapshot.docs.map(doc => ({
                 ...(serializeTimestamps(doc.data()) as Record<string, any>),
                 id: doc.id,
-                studentName: studentMap[doc.data().studentId] || ''
+                studentName:
+                    (typeof doc.data().studentName === 'string' && doc.data().studentName.trim().length > 0)
+                        ? doc.data().studentName
+                        : (studentMap[doc.data().studentId] || '')
             }));
 
             return {

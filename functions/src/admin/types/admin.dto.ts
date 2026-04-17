@@ -11,6 +11,13 @@ export interface RegisterAdminData {
 }
 
 /**
+ * Admin self-registration data transfer object
+ */
+export interface RegisterAdminSelfData extends RegisterAdminData {
+    masterKey: string;
+}
+
+/**
  * Admin update data transfer object
  */
 export interface UpdateAdminData {

@@ -64,7 +64,41 @@ export const getStudentSchedule = onCall(async (request) => {
                 .orderBy('sessionNumber', 'asc')
                 .get();
 
-            const appointments = appointmentsQuery.docs.map(d => serializeTimestamps(d.data()));
+            const needsCoachFallback = appointmentsQuery.docs.some((doc) => {
+                const coachName = doc.data().coachName;
+                return !(typeof coachName === 'string' && coachName.trim().length > 0);
+            });
+
+            let fallbackCoachName = '';
+            if (needsCoachFallback) {
+                const fallbackCoachId =
+                    (appointmentsQuery.docs.find((doc) => {
+                        const coachName = doc.data().coachName;
+                        return !(typeof coachName === 'string' && coachName.trim().length > 0);
+                    })?.data().coachId as string | undefined)
+                    || studentData.coachId;
+
+                if (fallbackCoachId) {
+                    const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(fallbackCoachId).get();
+                    if (coachDoc.exists) {
+                        const coachData = coachDoc.data()!;
+                        fallbackCoachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                    }
+                }
+            }
+
+            const appointments = appointmentsQuery.docs.map((doc) => {
+                const data = doc.data() as Record<string, any>;
+                const denormCoachName =
+                    typeof data.coachName === 'string' && data.coachName.trim().length > 0
+                        ? data.coachName
+                        : fallbackCoachName;
+
+                return serializeTimestamps({
+                    ...data,
+                    coachName: denormCoachName || ''
+                });
+            });
 
             // Özet bilgileri Firestore aggregation ile hesapla
             const [pendingCount, completedCount, cancelledCount] = await Promise.all([
@@ -102,10 +136,30 @@ export const getStudentSchedule = onCall(async (request) => {
                 };
             }
 
+            const scheduleRaw = scheduleQuery.docs[0].data() as Record<string, any>;
+            let coachName =
+                typeof scheduleRaw.coachName === 'string' && scheduleRaw.coachName.trim().length > 0
+                    ? scheduleRaw.coachName
+                    : '';
+
+            if (!coachName) {
+                const fallbackCoachId = (scheduleRaw.coachId as string | undefined) || studentData.coachId;
+                if (fallbackCoachId) {
+                    const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(fallbackCoachId).get();
+                    if (coachDoc.exists) {
+                        const coachData = coachDoc.data()!;
+                        coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                    }
+                }
+            }
+
             return {
                 success: true,
                 scheduleType: 'weekly_recurring',
-                schedule: serializeTimestamps(scheduleQuery.docs[0].data())
+                schedule: serializeTimestamps({
+                    ...scheduleRaw,
+                    coachName: coachName || ''
+                })
             };
         }
 
