@@ -31,3 +31,17 @@ export interface UpdateStudentProfileData {
 export interface UpdateStudentPasswordData {
     newPassword: string;
 }
+
+export interface GetStudentByIdData {
+    studentId: string;
+}
+
+export interface GetGymMembersData {
+    gymId: string;
+    limit?: number;
+}
+
+export interface GetCoachMembersData {
+    coachId: string;
+    limit?: number;
+}

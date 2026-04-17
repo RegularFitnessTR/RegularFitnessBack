@@ -8,4 +8,6 @@ export * from './functions/coachJoinGym';
 export * from './functions/updateCoachProfile';
 export * from './functions/deleteCoachAccount';
 export * from './functions/removeCoachFromGym';
+export * from './functions/getCoachById';
+export * from './functions/getGymCoaches';
 // createCoach, updateCoach, deleteCoach — devre dışı (admin yetkisi kaldırıldı)

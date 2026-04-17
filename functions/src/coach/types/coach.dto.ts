@@ -40,3 +40,12 @@ export interface UpdateCoachData {
     experienceYears?: number;
     gymId?: string;
 }
+
+export interface GetCoachByIdData {
+    coachId: string;
+}
+
+export interface GetGymCoachesData {
+    gymId: string;
+    limit?: number;
+}

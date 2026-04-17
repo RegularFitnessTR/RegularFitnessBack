@@ -1,39 +1,47 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 
 // Clean module imports using barrel exports
-import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount } from "./student";
-import { registerCoach, coachJoinGym, updateCoachProfile, deleteCoachAccount, removeCoachFromGym } from "./coach";
+import { getMyProfile } from "./common";
+import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount, getStudentById, getGymMembers, getCoachMembers } from "./student";
+import { registerCoach, coachJoinGym, updateCoachProfile, deleteCoachAccount, removeCoachFromGym, getCoachById, getGymCoaches } from "./coach";
 import { registerAdmin, createAdmin, updateAdmin, deleteAdmin, deleteAdminAccount } from "./admin";
 import { registerSuperAdmin, migrateGymClaims } from "./superadmin";
-import { createGym, updateGym, deleteGym, getGymDetails, addPackage, updatePackage, deletePackage, updateMembershipPlan, addMembershipPlan, deleteMembershipPlan, addAmenity, deleteAmenity } from "./gym";
+import { createGym, updateGym, deleteGym, getGymDetails, getOwnerGyms, addPackage, updatePackage, deletePackage, updateMembershipPlan, addMembershipPlan, deleteMembershipPlan, addAmenity, deleteAmenity } from "./gym";
 import { assignSubscription, getStudentSubscription, useSession, getStudentBalance, cancelSubscription } from "./subscription";
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
 import { createMeasurement, getMeasurements, getLatestMeasurement } from "./measurement";
 import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
 import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, getStudentSchedule, toggleScheduleStatus, createAppointments, updateAppointmentsPlan, deleteAppointmentsPlan, completeAppointment, postponeAppointment, cancelAppointment, checkCommitmentExpiry, checkSubscriptionExpiry, getCoachSchedules } from "./schedule";
-import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes } from "./applicationFeatures";
+import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes, getApplicationFeatures } from "./applicationFeatures";
 import { getSuperAdminLogs, getAdminLogs, getSuperAdminErrorLogs } from "./log";
 import { resetPassword } from "./auth";
 import { sendSessionReminder, getMyNotifications, markNotificationAsRead } from "./notification";
-import { gymCheckIn, gymCheckOut } from "./gymPresence";
+import { gymCheckIn, gymCheckOut, getGymPresence } from "./gymPresence";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10, enforceAppCheck: true });
 
 // Export functions
 export {
+    // Common
+    getMyProfile,
     // Student
     registerStudent,
     assignCoach,
     joinGym,
     updateStudentProfile,
     deleteStudentAccount,
+    getStudentById,
+    getGymMembers,
+    getCoachMembers,
     // Coach
     registerCoach,
     coachJoinGym,
     updateCoachProfile,
     deleteCoachAccount,
     removeCoachFromGym,
+    getCoachById,
+    getGymCoaches,
     // Admin
     registerAdmin,
     createAdmin,
@@ -48,6 +56,7 @@ export {
     updateGym,
     deleteGym,
     getGymDetails,
+    getOwnerGyms,
     addPackage,
     updatePackage,
     deletePackage,
@@ -100,6 +109,7 @@ export {
     deleteAmenities,
     deleteGymTypes,
     deleteSocialMediaTypes,
+    getApplicationFeatures,
     // Logs
     getSuperAdminLogs,
     getAdminLogs,
@@ -113,4 +123,5 @@ export {
     // Gym Presence
     gymCheckIn,
     gymCheckOut,
+    getGymPresence,
 };

@@ -9,6 +9,7 @@ export * from './functions/createGym';
 export * from './functions/updateGym';
 export * from './functions/deleteGym';
 export * from './functions/getGymDetails';
+export * from './functions/getOwnerGyms';
 export * from './functions/addPackage';
 export * from './functions/updatePackage';
 export * from './functions/updateMembershipPlan';

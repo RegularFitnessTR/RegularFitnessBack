@@ -20,3 +20,7 @@ export interface FeatureItem {
     name: string;
     createdAt?: any; // Firestore Timestamp
 }
+
+export interface GetApplicationFeaturesData {
+    documentId: 'amenities' | 'gym_types' | 'social_media_types';
+}

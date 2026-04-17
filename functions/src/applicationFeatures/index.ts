@@ -8,3 +8,4 @@ export * from './functions/createAmenities';
 export * from './functions/deleteAmentities';
 export * from './functions/createSocialMediaTypes';
 export * from './functions/deleteSocialMediaTypes';
+export * from './functions/getApplicationFeatures';

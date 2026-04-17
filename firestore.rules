@@ -18,6 +18,27 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // N-9.1: Kullanıcı kendi profil dokümanını dinleyebilsin.
+    match /admins/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /coaches/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /students/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /superadmins/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
     // Varsayilan olarak tum diger koleksiyonlar client tarafina kapali.
     match /{document=**} {
       allow read, write: if false;

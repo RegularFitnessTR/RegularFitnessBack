@@ -1,5 +1,25 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { logError } from "../../log/utils/logError";
+
+function canAccessGymByRole(request: any, gymId: string): boolean {
+    const role = request.auth?.token?.role;
+
+    if (role === 'superadmin') {
+        return true;
+    }
+
+    if (role === 'admin') {
+        const adminGymIds: string[] = request.auth?.token?.gymIds || [];
+        return adminGymIds.includes(gymId);
+    }
+
+    if (role === 'coach' || role === 'student') {
+        const ownGymId: string = request.auth?.token?.gymId || '';
+        return ownGymId === gymId;
+    }
+
+    return false;
+}
 
 export const getGymDetails = onCall(async (request) => {
     // 1. Verify user is authenticated
@@ -17,6 +37,10 @@ export const getGymDetails = onCall(async (request) => {
     }
 
     try {
+        if (!canAccessGymByRole(request, gymId)) {
+            throw new HttpsError('permission-denied', 'Bu spor salonuna erişim yetkiniz yok.');
+        }
+
         // 2. Get gym document
         const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
 
@@ -24,7 +48,7 @@ export const getGymDetails = onCall(async (request) => {
             throw new HttpsError('not-found', 'Spor salonu bulunamadı.');
         }
 
-        const gymData = gymDoc.data();
+        const gymData = serializeTimestamps(gymDoc.data());
 
         return {
             success: true,

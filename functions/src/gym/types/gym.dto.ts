@@ -40,3 +40,12 @@ export interface RemoveAmenityData {
     gymId: string;
     amenities: string[];
 }
+
+export interface GetGymDetailsData {
+    gymId: string;
+}
+
+export interface GetOwnerGymsData {
+    ownerId: string;
+    limit?: number;
+}
