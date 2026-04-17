@@ -34,6 +34,22 @@ async function queryByGymIds(
     return docs;
 }
 
+// Token claim stale/eksik olabilir; coach profilinden güncel gymId ile fallback doğrula
+async function resolveCoachGymId(request: any): Promise<string> {
+    const claimGymId: string = request.auth?.token?.gymId || '';
+    if (claimGymId) {
+        return claimGymId;
+    }
+
+    const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
+    if (!coachDoc.exists) {
+        return '';
+    }
+
+    const profileGymId = coachDoc.data()?.gymId;
+    return typeof profileGymId === 'string' ? profileGymId : '';
+}
+
 export const getPaymentRequests = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
@@ -66,7 +82,7 @@ export const getPaymentRequests = onCall(async (request) => {
             });
 
         } else if (role === 'coach') {
-            const coachGymId: string = request.auth.token.gymId || '';
+            const coachGymId = await resolveCoachGymId(request);
             if (!coachGymId) {
                 throw new HttpsError('failed-precondition', 'Bir spor salonuna atanmamışsınız.');
             }

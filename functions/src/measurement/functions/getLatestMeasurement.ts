@@ -1,6 +1,29 @@
 import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { logError } from "../../log/utils/logError";
 
+function mapUnexpectedMeasurementError(error: any): HttpsError {
+    const rawCode = String(error?.code ?? '').toLowerCase();
+    const rawMessage = String(error?.message ?? '');
+
+    if (rawCode.includes('failed-precondition') || rawCode === '9') {
+        return new HttpsError('failed-precondition', 'Ölçüm sorgusu için gerekli Firestore indexi eksik veya hazır değil.');
+    }
+
+    if (rawCode.includes('permission-denied') || rawCode === '7') {
+        return new HttpsError('permission-denied', 'Ölçüm verilerine erişim izni bulunamadı.');
+    }
+
+    if (rawCode.includes('unavailable') || rawCode === '14') {
+        return new HttpsError('unavailable', 'Ölçüm servisi geçici olarak kullanılamıyor.');
+    }
+
+    if (/index/i.test(rawMessage) && /create/i.test(rawMessage)) {
+        return new HttpsError('failed-precondition', 'Ölçüm sorgusu için gerekli Firestore indexi eksik veya hazır değil.');
+    }
+
+    return new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
+}
+
 export const getLatestMeasurement = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
@@ -83,6 +106,6 @@ export const getLatestMeasurement = onCall(async (request) => {
             throw error;
         }
 
-        throw new HttpsError('internal', 'İşlem sırasında bir hata oluştu.');
+        throw mapUnexpectedMeasurementError(error);
     }
 });
