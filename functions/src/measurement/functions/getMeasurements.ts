@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { logError } from "../../log/utils/logError";
 
 function mapUnexpectedMeasurementError(error: any): HttpsError {
@@ -82,7 +82,7 @@ export const getMeasurements = onCall(async (request) => {
         }
 
         const snapshot = await query.get();
-        const measurements = snapshot.docs.map((doc: any) => doc.data());
+        const measurements = snapshot.docs.map((doc: any) => serializeTimestamps(doc.data()));
 
         return {
             success: true,

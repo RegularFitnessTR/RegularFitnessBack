@@ -1,4 +1,4 @@
-import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../common";
 import { logError } from "../../log/utils/logError";
 
 function mapUnexpectedMeasurementError(error: any): HttpsError {
@@ -88,7 +88,7 @@ export const getLatestMeasurement = onCall(async (request) => {
 
         return {
             success: true,
-            measurement: snapshot.docs[0].data()
+            measurement: serializeTimestamps(snapshot.docs[0].data())
         };
 
     } catch (error: any) {

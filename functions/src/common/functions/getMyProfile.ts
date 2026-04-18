@@ -25,11 +25,43 @@ export const getMyProfile = onCall(async (request) => {
                 continue;
             }
 
+            const user: any = serializeTimestamps(doc.data());
+
+            if (entry.role === 'student' || entry.role === 'coach') {
+                const gymId = user?.gymId;
+                if (gymId) {
+                    try {
+                        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+                        user.gymName = gymDoc.exists ? (gymDoc.data()?.name ?? null) : null;
+                    } catch {
+                        user.gymName = null;
+                    }
+                }
+            }
+
+            if (entry.role === 'student') {
+                const coachId = user?.coachId;
+                if (coachId) {
+                    try {
+                        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
+                        if (coachDoc.exists) {
+                            const c = coachDoc.data();
+                            const full = [c?.firstName, c?.lastName].filter(Boolean).join(' ').trim();
+                            user.coachName = full.length > 0 ? full : null;
+                        } else {
+                            user.coachName = null;
+                        }
+                    } catch {
+                        user.coachName = null;
+                    }
+                }
+            }
+
             return {
                 success: true,
                 role: entry.role,
                 collection: entry.collection,
-                user: serializeTimestamps(doc.data())
+                user
             };
         }
 
