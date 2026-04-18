@@ -167,6 +167,7 @@ export const assignSubscription = onCall(async (request) => {
                 totalDebt,
                 totalPaid: 0,
                 currentBalance: -totalDebt,
+                scheduledSessionsCount: 0,
                 status: SubscriptionStatus.ACTIVE,
                 assignedAt: now,
                 assignedBy: request.auth.uid

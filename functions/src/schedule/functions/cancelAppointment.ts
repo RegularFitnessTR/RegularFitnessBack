@@ -65,16 +65,22 @@ export const cancelAppointment = onCall(async (request) => {
 
             // scheduledSessionsCount: pending/postponed slotlar sayılıyor. Cancelled sayılmıyor.
             // Dolayısıyla pending/postponed → cancelled transition'ında counter -1.
-            // Counter yoksa dokunma (migration sonrası düzelir).
             if (aptData.subscriptionId && (aptData.status === 'pending' || aptData.status === 'postponed')) {
                 const subRef = db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(aptData.subscriptionId);
                 const subDoc = await tx.get(subRef);
-                if (subDoc.exists && typeof subDoc.data()?.scheduledSessionsCount === 'number') {
-                    tx.update(subRef, {
-                        scheduledSessionsCount: admin.firestore.FieldValue.increment(-1),
-                        updatedAt: now,
-                    });
+                if (!subDoc.exists) {
+                    throw new HttpsError('not-found', 'Abonelik bulunamadı.');
                 }
+                if (typeof subDoc.data()?.scheduledSessionsCount !== 'number') {
+                    throw new HttpsError(
+                        'failed-precondition',
+                        'Abonelik seans sayacı eksik. Lütfen aboneliği yeniden oluşturun.'
+                    );
+                }
+                tx.update(subRef, {
+                    scheduledSessionsCount: admin.firestore.FieldValue.increment(-1),
+                    updatedAt: now,
+                });
             }
 
             return aptData;

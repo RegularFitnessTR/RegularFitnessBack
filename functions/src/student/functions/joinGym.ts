@@ -54,18 +54,7 @@ export const joinGym = onCall(async (request) => {
             updatedAt: admin.firestore.Timestamp.now()
         });
 
-        // Student token'ında gymId claim'i yok/eskimiş olabilir; best-effort senkronla.
-        try {
-            await syncGymClaims(studentId, { gymId: gymDoc.id });
-        } catch (claimError: any) {
-            void logError({
-                functionName: 'joinGym.syncGymClaims',
-                error: claimError,
-                userId: request.auth?.uid,
-                userRole: request.auth?.token?.role,
-                requestData: { gymPublicId, resolvedGymId: gymDoc.id }
-            });
-        }
+        await syncGymClaims(studentId, { gymId: gymDoc.id });
 
         // Log kaydı
         void logActivity({

@@ -132,20 +132,13 @@ export const createAppointments = onCall(async (request) => {
             const totalSessions = sub.totalSessions;
             gymId = sub.gymId;
 
-            // Counter varsa onu kullan (hızlı yol). Yoksa eski query yöntemiyle hesapla
-            // ve subscription'ı bu fırsatla migrate et.
-            let existingCount: number;
-            const counterAvailable = typeof sub.scheduledSessionsCount === 'number';
-            if (counterAvailable) {
-                existingCount = sub.scheduledSessionsCount as number;
-            } else {
-                const existingAptSnap = await tx.get(
-                    db.collection(COLLECTIONS.APPOINTMENTS)
-                        .where('subscriptionId', '==', data.subscriptionId)
-                        .where('status', 'in', ['pending', 'completed', 'postponed'])
+            if (typeof sub.scheduledSessionsCount !== 'number') {
+                throw new HttpsError(
+                    'failed-precondition',
+                    'Abonelik seans sayacı eksik. Lütfen aboneliği yeniden oluşturun.'
                 );
-                existingCount = existingAptSnap.size;
             }
+            const existingCount = sub.scheduledSessionsCount;
 
             const allowedCount = totalSessions - existingCount;
 
@@ -181,18 +174,10 @@ export const createAppointments = onCall(async (request) => {
                 tx.set(aptRef, newAppointment);
             });
 
-            // Counter güncelle: varsa atomik increment, yoksa fırsattan istifade absolute set
-            if (counterAvailable) {
-                tx.update(subRef, {
-                    scheduledSessionsCount: admin.firestore.FieldValue.increment(incomingCount),
-                    updatedAt: now,
-                });
-            } else {
-                tx.update(subRef, {
-                    scheduledSessionsCount: existingCount + incomingCount,
-                    updatedAt: now,
-                });
-            }
+            tx.update(subRef, {
+                scheduledSessionsCount: admin.firestore.FieldValue.increment(incomingCount),
+                updatedAt: now,
+            });
         });
 
         void logActivity({

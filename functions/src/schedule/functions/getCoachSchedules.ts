@@ -58,35 +58,14 @@ export const getCoachSchedules = onCall(async (request) => {
                 };
             }
 
-            // Yeni kayıtlarda denormalize studentName var; sadece eksik eski kayıtlar için lookup yap
-            const missingStudentIds = [...new Set(
-                snapshot.docs
-                    .map((d) => d.data())
-                    .filter((d) => !(typeof d.studentName === 'string' && d.studentName.trim().length > 0))
-                    .map((d) => d.studentId)
-                    .filter((id): id is string => typeof id === 'string' && id.length > 0)
-            )];
-            const studentMap: Record<string, string> = {};
-
-            if (missingStudentIds.length > 0) {
-                const refs = missingStudentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
-                const docs = await db.getAll(...refs);
-                docs.forEach(doc => {
-                    if (doc.exists) {
-                        const s = doc.data()!;
-                        studentMap[doc.id] = `${s.firstName || ''} ${s.lastName || ''}`.trim();
-                    }
-                });
-            }
-
-            const appointments = snapshot.docs.map(doc => ({
-                ...(serializeTimestamps(doc.data()) as Record<string, any>),
-                id: doc.id,
-                studentName:
-                    (typeof doc.data().studentName === 'string' && doc.data().studentName.trim().length > 0)
-                        ? doc.data().studentName
-                        : (studentMap[doc.data().studentId] || '')
-            }));
+            const appointments = snapshot.docs.map(doc => {
+                const raw = doc.data();
+                return {
+                    ...(serializeTimestamps(raw) as Record<string, any>),
+                    id: doc.id,
+                    studentName: typeof raw.studentName === 'string' ? raw.studentName : ''
+                };
+            });
 
             return {
                 success: true,
@@ -110,35 +89,14 @@ export const getCoachSchedules = onCall(async (request) => {
                 };
             }
 
-            // Yeni kayıtlarda denormalize studentName var; sadece eksik eski kayıtlar için lookup yap
-            const missingStudentIds = [...new Set(
-                snapshot.docs
-                    .map((d) => d.data())
-                    .filter((d) => !(typeof d.studentName === 'string' && d.studentName.trim().length > 0))
-                    .map((d) => d.studentId)
-                    .filter((id): id is string => typeof id === 'string' && id.length > 0)
-            )];
-            const studentMap: Record<string, string> = {};
-
-            if (missingStudentIds.length > 0) {
-                const refs = missingStudentIds.map(sid => db.collection(COLLECTIONS.STUDENTS).doc(sid));
-                const docs = await db.getAll(...refs);
-                docs.forEach(doc => {
-                    if (doc.exists) {
-                        const s = doc.data()!;
-                        studentMap[doc.id] = `${s.firstName || ''} ${s.lastName || ''}`.trim();
-                    }
-                });
-            }
-
-            const schedules = snapshot.docs.map(doc => ({
-                ...(serializeTimestamps(doc.data()) as Record<string, any>),
-                id: doc.id,
-                studentName:
-                    (typeof doc.data().studentName === 'string' && doc.data().studentName.trim().length > 0)
-                        ? doc.data().studentName
-                        : (studentMap[doc.data().studentId] || '')
-            }));
+            const schedules = snapshot.docs.map(doc => {
+                const raw = doc.data();
+                return {
+                    ...(serializeTimestamps(raw) as Record<string, any>),
+                    id: doc.id,
+                    studentName: typeof raw.studentName === 'string' ? raw.studentName : ''
+                };
+            });
 
             return {
                 success: true,

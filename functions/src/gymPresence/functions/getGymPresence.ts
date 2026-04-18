@@ -10,22 +10,6 @@ function parseLimit(rawLimit: unknown): number {
     return Math.min(Math.max(requested, 1), 500);
 }
 
-// Token claim stale/eksik olabilir; coach profilinden güncel gymId ile fallback doğrula.
-async function resolveCoachGymId(request: any): Promise<string> {
-    const claimGymId: string = request.auth?.token?.gymId || '';
-    if (claimGymId) {
-        return claimGymId;
-    }
-
-    const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(request.auth.uid).get();
-    if (!coachDoc.exists) {
-        return '';
-    }
-
-    const profileGymId = coachDoc.data()?.gymId;
-    return typeof profileGymId === 'string' ? profileGymId : '';
-}
-
 export const getGymPresence = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
@@ -60,8 +44,11 @@ export const getGymPresence = onCall(async (request) => {
                 throw new HttpsError('permission-denied', 'Bu salonun giriş kayıtlarını görüntüleme yetkiniz yok.');
             }
         } else if (role === 'coach') {
-            const ownGymId = await resolveCoachGymId(request);
-            if (!ownGymId || ownGymId !== gymId) {
+            const ownGymId = typeof request.auth.token.gymId === 'string' ? request.auth.token.gymId : '';
+            if (!ownGymId) {
+                throw new HttpsError('failed-precondition', 'Gym claim bilgisi eksik. Lütfen tekrar giriş yapın.');
+            }
+            if (ownGymId !== gymId) {
                 throw new HttpsError('permission-denied', 'Sadece kendi salonunuzun giriş kayıtlarını görüntüleyebilirsiniz.');
             }
         } else if (role !== 'superadmin') {

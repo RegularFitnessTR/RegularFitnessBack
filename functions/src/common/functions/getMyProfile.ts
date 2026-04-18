@@ -11,38 +11,12 @@ const ROLE_TO_COLLECTION: Record<string, string> = {
     superadmin: COLLECTIONS.SUPERADMINS,
 };
 
-// Role claim eksik / geçersiz olduğunda fallback için: tüm collection'ları paralel kontrol et.
-const FALLBACK_RESOLUTION_ORDER = [
-    { collection: COLLECTIONS.ADMINS, role: 'admin' as const },
-    { collection: COLLECTIONS.COACHES, role: 'coach' as const },
-    { collection: COLLECTIONS.STUDENTS, role: 'student' as const },
-    { collection: COLLECTIONS.SUPERADMINS, role: 'superadmin' as const },
-];
-
 async function resolveProfileByRoleClaim(uid: string, role: string) {
     const collection = ROLE_TO_COLLECTION[role];
     if (!collection) return null;
     const doc = await db.collection(collection).doc(uid).get();
     if (!doc.exists) return null;
     return { collection, role: role as 'admin' | 'coach' | 'student' | 'superadmin', doc };
-}
-
-async function resolveProfileFallback(uid: string) {
-    // Role claim yoksa veya yanlışsa: tüm collection'ları paralel okuyup ilk match'i al.
-    // Sıralı for-loop'a göre çok daha hızlı (4 RPC sequential → 1 RPC parallel duration).
-    const results = await Promise.all(
-        FALLBACK_RESOLUTION_ORDER.map((entry) =>
-            db.collection(entry.collection).doc(uid).get()
-                .then((doc) => ({ entry, doc }))
-                .catch(() => null)
-        )
-    );
-    for (const result of results) {
-        if (result && result.doc.exists) {
-            return { collection: result.entry.collection, role: result.entry.role, doc: result.doc };
-        }
-    }
-    return null;
 }
 
 export const getMyProfile = onCall(async (request) => {
@@ -54,12 +28,11 @@ export const getMyProfile = onCall(async (request) => {
     const claimRole = typeof request.auth.token.role === 'string' ? request.auth.token.role : '';
 
     try {
-        // Önce JWT claim'deki role'e göre tek doğrudan lookup dene.
-        // Eski (claim'siz) kullanıcılar için fallback'e düş.
-        let resolved = claimRole ? await resolveProfileByRoleClaim(uid, claimRole) : null;
-        if (!resolved) {
-            resolved = await resolveProfileFallback(uid);
+        if (!claimRole || !(claimRole in ROLE_TO_COLLECTION)) {
+            throw new HttpsError('failed-precondition', 'Token role claim bilgisi eksik veya geçersiz. Lütfen tekrar giriş yapın.');
         }
+
+        const resolved = await resolveProfileByRoleClaim(uid, claimRole);
 
         if (!resolved) {
             throw new HttpsError('not-found', 'Kullanıcı profili bulunamadı.');

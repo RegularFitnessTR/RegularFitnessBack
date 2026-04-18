@@ -34,8 +34,7 @@ export interface PackageSubscription extends BaseSubscription {
 
     // Pending/completed/postponed (yani "slot kaplayan") randevu sayısı.
     // createAppointments race-condition koruması için query yerine bu counter okunur.
-    // Eski subscription'larda undefined olabilir → migrateSubscriptionCounters endpoint'i ile backfill.
-    scheduledSessionsCount?: number;
+    scheduledSessionsCount: number;
 }
 
 export interface MembershipSubscription extends BaseSubscription {

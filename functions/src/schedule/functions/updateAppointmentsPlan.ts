@@ -96,6 +96,12 @@ export const updateAppointmentsPlan = onCall(async (request) => {
         if (sub.status !== SubscriptionStatus.ACTIVE) {
             throw new HttpsError('failed-precondition', 'Abonelik aktif değil.');
         }
+        if (typeof sub.scheduledSessionsCount !== 'number') {
+            throw new HttpsError(
+                'failed-precondition',
+                'Abonelik seans sayacı eksik. Lütfen aboneliği yeniden oluşturun.'
+            );
+        }
 
         let coachName = '';
         if (sub.coachId) {
@@ -160,12 +166,12 @@ export const updateAppointmentsPlan = onCall(async (request) => {
         editableAppointments.forEach((doc) => batch.delete(doc.ref));
 
         // Counter delta: silinen non-cancelled (slot kaplayan) sayısını çıkar,
-        // yeni eklenenleri ekle. Counter yoksa migration sonrası düzelir.
+        // yeni eklenenleri ekle.
         const editableNonCancelledCount = editableAppointments.filter(
             (doc) => doc.data().status !== 'cancelled'
         ).length;
         const counterDelta = data.appointments.length - editableNonCancelledCount;
-        if (counterDelta !== 0 && typeof sub.scheduledSessionsCount === 'number') {
+        if (counterDelta !== 0) {
             batch.update(subDoc.ref, {
                 scheduledSessionsCount: admin.firestore.FieldValue.increment(counterDelta),
                 updatedAt: now,

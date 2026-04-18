@@ -84,13 +84,17 @@ export const deleteAppointmentsPlan = onCall(async (request) => {
             (doc) => doc.data().status !== 'cancelled'
         ).length;
 
+        if (nonCancelledDeletedCount > 0 && typeof sub.scheduledSessionsCount !== 'number') {
+            throw new HttpsError(
+                'failed-precondition',
+                'Abonelik seans sayacı eksik. Lütfen aboneliği yeniden oluşturun.'
+            );
+        }
+
         const batch = db.batch();
         existingAppointments.docs.forEach((doc) => batch.delete(doc.ref));
 
-        if (
-            nonCancelledDeletedCount > 0 &&
-            typeof sub.scheduledSessionsCount === 'number'
-        ) {
+        if (nonCancelledDeletedCount > 0) {
             batch.update(
                 db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(data.subscriptionId),
                 {
