@@ -66,7 +66,7 @@ export const sendSessionReminder = onRequest(async (req, res) => {
             sent: true,
         });
     } catch (error) {
-        await logError({
+        void logError({
             functionName: "sendSessionReminder",
             error,
             severity: LogSeverity.ERROR,

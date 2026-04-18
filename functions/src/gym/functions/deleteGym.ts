@@ -125,7 +125,7 @@ export const deleteGym = onCall(async (request) => {
     } catch (error: any) {
         console.error("Gym silme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'deleteGym',
             error,
             userId: request.auth?.uid,

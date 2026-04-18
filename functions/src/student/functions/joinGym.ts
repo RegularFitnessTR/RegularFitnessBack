@@ -58,7 +58,7 @@ export const joinGym = onCall(async (request) => {
         try {
             await syncGymClaims(studentId, { gymId: gymDoc.id });
         } catch (claimError: any) {
-            await logError({
+            void logError({
                 functionName: 'joinGym.syncGymClaims',
                 error: claimError,
                 userId: request.auth?.uid,
@@ -93,7 +93,7 @@ export const joinGym = onCall(async (request) => {
     } catch (error: any) {
         console.error("Salon kayıt hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'joinGym',
             error,
             userId: request.auth?.uid,

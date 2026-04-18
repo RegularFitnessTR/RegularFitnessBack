@@ -93,7 +93,7 @@ export const getMeasurements = onCall(async (request) => {
     } catch (error: any) {
         console.error("Ölçümleri getirme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'getMeasurements',
             error,
             userId: request.auth?.uid,

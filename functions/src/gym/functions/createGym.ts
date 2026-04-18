@@ -98,7 +98,7 @@ export const createGym = onCall(async (request) => {
         return { success: true, message: "Spor salonu başarıyla oluşturuldu.", gymId, publicId };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'createGym',
             error,
             userId: request.auth?.uid,

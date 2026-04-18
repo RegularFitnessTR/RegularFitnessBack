@@ -111,7 +111,7 @@ export const registerCoach = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: "registerCoach",
             error,
             requestData: data,

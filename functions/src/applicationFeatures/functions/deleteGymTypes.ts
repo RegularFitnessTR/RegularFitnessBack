@@ -76,7 +76,7 @@ export const deleteGymTypes = onCall(async (request) => {
     } catch (error: any) {
         console.error("Gym tipi silme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'deleteGymTypes',
             error,
             userId: request.auth?.uid,

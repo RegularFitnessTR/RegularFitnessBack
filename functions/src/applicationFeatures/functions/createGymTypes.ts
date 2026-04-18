@@ -101,7 +101,7 @@ export const createGymTypes = onCall(async (request) => {
     } catch (error: any) {
         console.error("Gym tipi oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createGymTypes',
             error,
             userId: request.auth?.uid,

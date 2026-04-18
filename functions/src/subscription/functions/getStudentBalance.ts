@@ -100,7 +100,7 @@ export const getStudentBalance = onCall(async (request) => {
         }
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getStudentBalance',
             error,
             userId: request.auth?.uid,

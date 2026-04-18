@@ -117,7 +117,7 @@ export const useSession = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'useSession',
             error,
             userId: request.auth?.uid,

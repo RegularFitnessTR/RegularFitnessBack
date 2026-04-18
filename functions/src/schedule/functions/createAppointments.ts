@@ -100,9 +100,9 @@ export const createAppointments = onCall(async (request) => {
         let gymId = '';
 
         await db.runTransaction(async (tx) => {
-            const subDoc = await tx.get(
-                db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(data.subscriptionId)
-            );
+            const subRef = db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(data.subscriptionId);
+            const subDoc = await tx.get(subRef);
+
             if (!subDoc.exists) {
                 throw new HttpsError('not-found', 'Abonelik bulunamadı.');
             }
@@ -132,12 +132,21 @@ export const createAppointments = onCall(async (request) => {
             const totalSessions = sub.totalSessions;
             gymId = sub.gymId;
 
-            const existingAptSnap = await tx.get(
-                db.collection(COLLECTIONS.APPOINTMENTS)
-                    .where('subscriptionId', '==', data.subscriptionId)
-                    .where('status', 'in', ['pending', 'completed', 'postponed'])
-            );
-            const existingCount = existingAptSnap.size;
+            // Counter varsa onu kullan (hızlı yol). Yoksa eski query yöntemiyle hesapla
+            // ve subscription'ı bu fırsatla migrate et.
+            let existingCount: number;
+            const counterAvailable = typeof sub.scheduledSessionsCount === 'number';
+            if (counterAvailable) {
+                existingCount = sub.scheduledSessionsCount as number;
+            } else {
+                const existingAptSnap = await tx.get(
+                    db.collection(COLLECTIONS.APPOINTMENTS)
+                        .where('subscriptionId', '==', data.subscriptionId)
+                        .where('status', 'in', ['pending', 'completed', 'postponed'])
+                );
+                existingCount = existingAptSnap.size;
+            }
+
             const allowedCount = totalSessions - existingCount;
 
             if (incomingCount !== allowedCount) {
@@ -171,6 +180,19 @@ export const createAppointments = onCall(async (request) => {
                 };
                 tx.set(aptRef, newAppointment);
             });
+
+            // Counter güncelle: varsa atomik increment, yoksa fırsattan istifade absolute set
+            if (counterAvailable) {
+                tx.update(subRef, {
+                    scheduledSessionsCount: admin.firestore.FieldValue.increment(incomingCount),
+                    updatedAt: now,
+                });
+            } else {
+                tx.update(subRef, {
+                    scheduledSessionsCount: existingCount + incomingCount,
+                    updatedAt: now,
+                });
+            }
         });
 
         await logActivity({
@@ -197,7 +219,7 @@ export const createAppointments = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'createAppointments',
             error,
             userId: request.auth?.uid,

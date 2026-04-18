@@ -88,7 +88,7 @@ export const updateCoachProfile = onCall(async (request) => {
     } catch (error: any) {
         console.error("Profil güncelleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'updateCoachProfile',
             error,
             userId: request.auth?.uid,

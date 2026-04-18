@@ -62,7 +62,7 @@ export const getCoachMembers = onCall(async (request) => {
             members
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getCoachMembers',
             error,
             userId: request.auth?.uid,

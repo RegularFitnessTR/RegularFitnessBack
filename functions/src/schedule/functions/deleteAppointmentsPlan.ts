@@ -1,3 +1,4 @@
+import * as admin from "firebase-admin";
 import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { PackageSubscription } from "../../subscription/types/subscription.model";
@@ -77,8 +78,30 @@ export const deleteAppointmentsPlan = onCall(async (request) => {
             );
         }
 
+        // scheduledSessionsCount: cancelled olanlar zaten sayılmıyordu.
+        // Silinenlerden sadece non-cancelled olanları counter'dan düş.
+        const nonCancelledDeletedCount = existingAppointments.docs.filter(
+            (doc) => doc.data().status !== 'cancelled'
+        ).length;
+
         const batch = db.batch();
         existingAppointments.docs.forEach((doc) => batch.delete(doc.ref));
+
+        if (
+            nonCancelledDeletedCount > 0 &&
+            typeof sub.scheduledSessionsCount === 'number'
+        ) {
+            batch.update(
+                db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(data.subscriptionId),
+                {
+                    scheduledSessionsCount: admin.firestore.FieldValue.increment(
+                        -nonCancelledDeletedCount
+                    ),
+                    updatedAt: admin.firestore.Timestamp.now(),
+                }
+            );
+        }
+
         await batch.commit();
 
         await logActivity({
@@ -108,7 +131,7 @@ export const deleteAppointmentsPlan = onCall(async (request) => {
             deletedCount: existingAppointments.size
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'deleteAppointmentsPlan',
             error,
             userId: request.auth?.uid,

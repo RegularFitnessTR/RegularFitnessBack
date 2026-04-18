@@ -150,7 +150,7 @@ export const assignWorkoutSchedule = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'assignWorkoutSchedule',
             error,
             userId: request.auth?.uid,

@@ -114,7 +114,7 @@ export const checkSubscriptionExpiry = onSchedule('0 6 * * *', async () => {
 
         const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
 
-        await logError({
+        void logError({
             functionName: 'checkSubscriptionExpiry',
             error,
             severity: LogSeverity.CRITICAL,
@@ -135,7 +135,7 @@ export const checkSubscriptionExpiry = onSchedule('0 6 * * *', async () => {
                 });
             }
         } catch (notificationFlowError) {
-            await logError({
+            void logError({
                 functionName: 'checkSubscriptionExpiry.notificationFlow',
                 error: notificationFlowError,
                 severity: LogSeverity.ERROR,

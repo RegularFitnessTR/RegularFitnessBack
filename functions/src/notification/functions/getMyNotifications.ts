@@ -68,7 +68,7 @@ export const getMyNotifications = onCall(async (request) => {
     } catch (error: any) {
         console.error("Bildirimleri getirme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: "getMyNotifications",
             error,
             userId: uid,

@@ -94,7 +94,7 @@ export const updatePackage = onCall(async (request) => {
     } catch (error: any) {
         console.error("Paket güncelleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'updatePackage',
             error,
             userId: request.auth?.uid,

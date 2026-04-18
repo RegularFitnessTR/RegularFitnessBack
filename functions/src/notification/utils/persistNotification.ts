@@ -55,7 +55,7 @@ export const persistNotification = async (
             0
         );
 
-        await logError({
+        void logError({
             functionName: "persistNotification",
             error: err,
             severity: LogSeverity.ERROR,

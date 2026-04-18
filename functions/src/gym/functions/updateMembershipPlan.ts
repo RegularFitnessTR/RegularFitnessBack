@@ -97,7 +97,7 @@ export const updateMembershipPlan = onCall(async (request) => {
         return { success: true, message: 'Plan başarıyla güncellendi.' };
 
     } catch (error: any) {
-        await logError({ functionName: 'updateMembershipPlan', error, userId: request.auth?.uid, userRole: role, requestData: data });
+        void logError({ functionName: 'updateMembershipPlan', error, userId: request.auth?.uid, userRole: role, requestData: data });
         if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'Plan güncellenirken bir hata oluştu.');
     }

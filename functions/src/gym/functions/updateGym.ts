@@ -166,7 +166,7 @@ export const updateGym = onCall(async (request) => {
     } catch (error: any) {
         console.error("Gym güncelleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'updateGym',
             error,
             userId: request.auth?.uid,

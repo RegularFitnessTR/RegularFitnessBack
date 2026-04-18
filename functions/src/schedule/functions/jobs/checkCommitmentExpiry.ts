@@ -63,7 +63,7 @@ export const checkCommitmentExpiry = onSchedule('0 0 * * *', async () => {
 
         const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
 
-        await logError({
+        void logError({
             functionName: 'checkCommitmentExpiry',
             error,
             severity: LogSeverity.CRITICAL,
@@ -84,7 +84,7 @@ export const checkCommitmentExpiry = onSchedule('0 0 * * *', async () => {
                 });
             }
         } catch (notificationFlowError) {
-            await logError({
+            void logError({
                 functionName: 'checkCommitmentExpiry.notificationFlow',
                 error: notificationFlowError,
                 severity: LogSeverity.ERROR,

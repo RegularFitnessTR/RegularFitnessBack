@@ -70,7 +70,7 @@ export const deleteMembershipPlan = onCall(async (request) => {
         return { success: true, message: 'Plan başarıyla silindi.' };
 
     } catch (error: any) {
-        await logError({ functionName: 'deleteMembershipPlan', error, userId: request.auth?.uid, userRole: role, requestData: data });
+        void logError({ functionName: 'deleteMembershipPlan', error, userId: request.auth?.uid, userRole: role, requestData: data });
         if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'Plan silinirken bir hata oluştu.');
     }

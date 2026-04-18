@@ -189,7 +189,7 @@ export const approvePayment = onCall(async (request) => {
     } catch (error: any) {
         console.error("Ödeme onaylama hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'approvePayment',
             error,
             userId: request.auth?.uid,

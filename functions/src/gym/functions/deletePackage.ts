@@ -84,7 +84,7 @@ export const deletePackage = onCall(async (request) => {
     } catch (error: any) {
         console.error("Paket silme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'deletePackage',
             error,
             userId: request.auth?.uid,

@@ -63,7 +63,7 @@ export const createSocialMediaTypes = onCall(async (request) => {
     } catch (error: any) {
         console.error("Sosyal medya oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createSocialMediaTypes',
             error,
             userId: request.auth?.uid,

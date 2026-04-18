@@ -95,7 +95,7 @@ export const getAdminLogs = onCall(async (request) => {
     } catch (error: any) {
         console.error("Admin log sorgulama hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'getAdminLogs',
             error,
             userId: request.auth?.uid,

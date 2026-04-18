@@ -52,7 +52,7 @@ export const getGymCoaches = onCall(async (request) => {
             coaches
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getGymCoaches',
             error,
             userId: request.auth?.uid,

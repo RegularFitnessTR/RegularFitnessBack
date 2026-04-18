@@ -46,7 +46,7 @@ export const getOwnerGyms = onCall(async (request) => {
             gyms
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getOwnerGyms',
             error,
             userId: request.auth?.uid,

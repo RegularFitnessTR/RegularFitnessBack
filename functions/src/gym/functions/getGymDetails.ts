@@ -48,12 +48,16 @@ export const getGymDetails = onCall(async (request) => {
     }
 
     try {
-        if (!(await canAccessGymByRole(request, gymId))) {
+        // Speculative paralel: erişim kontrolü ile gym fetch'i aynı anda başlat.
+        // Permission-denied case'i nadirdir; küçük bir wasted-read kabul edilebilir trade-off.
+        const [accessAllowed, gymDoc] = await Promise.all([
+            canAccessGymByRole(request, gymId),
+            db.collection(COLLECTIONS.GYMS).doc(gymId).get(),
+        ]);
+
+        if (!accessAllowed) {
             throw new HttpsError('permission-denied', 'Bu spor salonuna erişim yetkiniz yok.');
         }
-
-        // 2. Get gym document
-        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
 
         if (!gymDoc.exists) {
             throw new HttpsError('not-found', 'Spor salonu bulunamadı.');
@@ -69,7 +73,7 @@ export const getGymDetails = onCall(async (request) => {
     } catch (error: any) {
         console.error("Gym detay hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'getGymDetails',
             error,
             userId: request.auth?.uid,

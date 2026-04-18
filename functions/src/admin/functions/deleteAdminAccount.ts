@@ -238,7 +238,7 @@ export const deleteAdminAccount = onCall(async (request) => {
         return { success: true, message: "Hesabınız başarıyla silindi." };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: "deleteAdminAccount",
             error,
             userId: uid,

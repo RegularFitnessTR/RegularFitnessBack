@@ -5,7 +5,7 @@ import { getMyProfile } from "./common";
 import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount, getStudentById, getGymMembers, getCoachMembers } from "./student";
 import { registerCoach, coachJoinGym, updateCoachProfile, deleteCoachAccount, removeCoachFromGym, getCoachById, getGymCoaches } from "./coach";
 import { registerAdmin, createAdmin, updateAdmin, deleteAdmin, deleteAdminAccount } from "./admin";
-import { registerSuperAdmin, migrateGymClaims } from "./superadmin";
+import { registerSuperAdmin, migrateGymClaims, migrateSubscriptionCounters } from "./superadmin";
 import { createGym, updateGym, deleteGym, getGymDetails, getOwnerGyms, addPackage, updatePackage, deletePackage, updateMembershipPlan, addMembershipPlan, deleteMembershipPlan, addAmenity, deleteAmenity } from "./gym";
 import { assignSubscription, getStudentSubscription, useSession, getStudentBalance, cancelSubscription } from "./subscription";
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
@@ -51,6 +51,7 @@ export {
     // SuperAdmin
     registerSuperAdmin,
     migrateGymClaims,
+    migrateSubscriptionCounters,
     // Gym
     createGym,
     updateGym,

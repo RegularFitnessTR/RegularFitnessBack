@@ -114,7 +114,7 @@ export const gymCheckIn = onCall(async (request) => {
         return { success: true, message: 'Salona giriş başarılı.', presenceId: presenceRef.id };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'gymCheckIn',
             error,
             userId: uid,

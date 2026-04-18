@@ -202,7 +202,7 @@ export const createPaymentRequest = onCall(async (request) => {
     } catch (error: any) {
         console.error("Ödeme talebi oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createPaymentRequest',
             error,
             userId: request.auth?.uid,

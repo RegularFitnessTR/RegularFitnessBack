@@ -74,7 +74,7 @@ export const getSuperAdminErrorLogs = onCall(async (request) => {
     } catch (error: any) {
         console.error("SuperAdmin error log sorgulama hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'getSuperAdminErrorLogs',
             error,
             userId: request.auth?.uid,

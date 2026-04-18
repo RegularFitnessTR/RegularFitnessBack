@@ -162,7 +162,7 @@ export const updateAdmin = onCall(async (request) => {
     } catch (error: any) {
         console.error("Admin güncelleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'updateAdmin',
             error,
             userId: request.auth?.uid,

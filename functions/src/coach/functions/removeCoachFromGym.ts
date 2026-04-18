@@ -168,7 +168,7 @@ export const removeCoachFromGym = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: "removeCoachFromGym",
             error,
             userId: request.auth?.uid,

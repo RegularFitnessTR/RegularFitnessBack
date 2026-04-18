@@ -104,7 +104,7 @@ export const updateWorkoutSchedule = onCall(async (request) => {
         return { success: true, message: 'Çalışma programı başarıyla güncellendi.' };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'updateWorkoutSchedule',
             error,
             userId: request.auth?.uid,

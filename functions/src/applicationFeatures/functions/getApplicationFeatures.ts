@@ -38,7 +38,7 @@ export const getApplicationFeatures = onCall(async (request) => {
             items
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getApplicationFeatures',
             error,
             userId: request.auth?.uid,

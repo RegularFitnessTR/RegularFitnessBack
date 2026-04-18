@@ -60,7 +60,7 @@ export const updateStudentPassword = onCall(async (request) => {
     } catch (error: any) {
         console.error("Öğrenci şifre güncelleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'updateStudentPassword',
             error,
             userId: request.auth?.uid,

@@ -110,7 +110,7 @@ export const assignCoach = onCall(async (request) => {
     } catch (error: any) {
         console.error("Hoca atama hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'assignCoach',
             error,
             userId: request.auth?.uid,

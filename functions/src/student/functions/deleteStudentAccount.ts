@@ -295,7 +295,7 @@ export const deleteStudentAccount = onCall(async (request) => {
         return { success: true, message: "Hesabınız başarıyla silindi." };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: "deleteStudentAccount",
             error,
             userId: uid,

@@ -85,7 +85,7 @@ export const gymCheckOut = onCall(async (request) => {
         return { success: true, message: 'Salon çıkışı başarılı.' };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'gymCheckOut',
             error,
             userId: uid,

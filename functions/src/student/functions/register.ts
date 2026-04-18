@@ -77,14 +77,7 @@ export const registerStudent = onCall(async (request) => {
             phoneNumber: data.phoneNumber || undefined,
         });
 
-        // 2. Set custom claims for student role
-        await auth.setCustomUserClaims(userRecord.uid, {
-            role: 'student',
-            student: true,
-            ...(resolvedGymId ? { gymId: resolvedGymId } : {})
-        });
-
-        // 3. Create Firestore document in students collection
+        // 2. Set custom claims + Firestore document — bağımsız işlemler, paralel yap
         const newStudent: StudentUser = {
             uid: userRecord.uid,
             role: 'student',
@@ -100,7 +93,14 @@ export const registerStudent = onCall(async (request) => {
             coachId: "" // No coach assigned initially
         };
 
-        await db.collection(COLLECTIONS.STUDENTS).doc(userRecord.uid).set(newStudent);
+        await Promise.all([
+            auth.setCustomUserClaims(userRecord.uid, {
+                role: 'student',
+                student: true,
+                ...(resolvedGymId ? { gymId: resolvedGymId } : {})
+            }),
+            db.collection(COLLECTIONS.STUDENTS).doc(userRecord.uid).set(newStudent),
+        ]);
 
         // Öğrenci ancak bir gym'e bağlı ise loglanır.
         if (resolvedGymId) {
@@ -135,7 +135,7 @@ export const registerStudent = onCall(async (request) => {
     } catch (error: any) {
         console.error("Kayıt hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'registerStudent',
             error,
             requestData: data

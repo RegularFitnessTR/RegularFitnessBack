@@ -31,7 +31,7 @@ async function cleanStaleTokensWithRetry(staleTokens: string[]): Promise<void> {
             return;
         } catch (cleanupError) {
             if (attempt > STALE_TOKEN_RETRY_COUNT) {
-                await logError({
+                void logError({
                     functionName: "sendNotification.cleanStaleTokens",
                     error: cleanupError,
                     severity: LogSeverity.ERROR,
@@ -43,7 +43,7 @@ async function cleanStaleTokensWithRetry(staleTokens: string[]): Promise<void> {
                 return;
             }
 
-            await logError({
+            void logError({
                 functionName: "sendNotification.cleanStaleTokens.retry",
                 error: cleanupError,
                 severity: LogSeverity.WARNING,
@@ -117,7 +117,7 @@ export const sendNotification = async (
                     .map((res) => res.error?.code)
                     .filter((code): code is string => Boolean(code));
 
-                await logError({
+                void logError({
                     functionName: "sendNotification.sendEach",
                     error: new Error(`FCM sendEach partial failure: ${response.failureCount}/${chunk.length}`),
                     severity: LogSeverity.WARNING,
@@ -149,7 +149,7 @@ export const sendNotification = async (
         // Bildirim hatası ana işlemi (ödeme onayı vb.) asla durdurmamalı
         console.error("sendNotification error:", err);
 
-        await logError({
+        void logError({
             functionName: "sendNotification",
             error: err,
             severity: LogSeverity.ERROR,

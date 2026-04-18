@@ -177,7 +177,7 @@ export const deleteCoachAccount = onCall(async (request) => {
         return { success: true, message: "Hesabınız başarıyla silindi." };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: "deleteCoachAccount",
             error,
             userId: uid,

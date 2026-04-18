@@ -81,7 +81,7 @@ export const addMembershipPlan = onCall(async (request) => {
         return { success: true, message: 'Plan başarıyla eklendi.' };
 
     } catch (error: any) {
-        await logError({ functionName: 'addMembershipPlan', error, userId: request.auth?.uid, userRole: role, requestData: data });
+        void logError({ functionName: 'addMembershipPlan', error, userId: request.auth?.uid, userRole: role, requestData: data });
         if (error instanceof HttpsError) throw error;
         throw new HttpsError('internal', 'Plan eklenirken bir hata oluştu.');
     }

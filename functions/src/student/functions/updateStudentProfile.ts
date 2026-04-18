@@ -111,7 +111,7 @@ export const updateStudentProfile = onCall(async (request) => {
     } catch (error: any) {
         console.error("Öğrenci profil güncelleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'updateStudentProfile',
             error,
             userId: request.auth?.uid,

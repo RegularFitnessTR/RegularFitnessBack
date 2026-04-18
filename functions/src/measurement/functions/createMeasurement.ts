@@ -114,7 +114,7 @@ export const createMeasurement = onCall(async (request) => {
     } catch (error: any) {
         console.error("Ölçüm oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createMeasurement',
             error,
             userId: request.auth?.uid,

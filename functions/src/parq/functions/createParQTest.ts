@@ -99,7 +99,7 @@ export const createParQTest = onCall(async (request) => {
     } catch (error: any) {
         console.error("ParQ testi oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createParQTest',
             error,
             userId: request.auth?.uid,

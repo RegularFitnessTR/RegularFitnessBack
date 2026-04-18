@@ -68,7 +68,7 @@ export const addAmenity = onCall(async (request) => {
     } catch (error: any) {
         console.error("İmkan ekleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'addAmenity',
             error,
             userId: request.auth?.uid,

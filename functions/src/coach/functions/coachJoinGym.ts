@@ -85,7 +85,7 @@ export const coachJoinGym = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: "coachJoinGym",
             error,
             userId: coachUid,

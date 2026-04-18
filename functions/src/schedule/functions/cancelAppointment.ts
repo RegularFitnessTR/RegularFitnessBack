@@ -29,40 +29,55 @@ export const cancelAppointment = onCall(async (request) => {
 
     try {
         const aptRef = db.collection(COLLECTIONS.APPOINTMENTS).doc(data.appointmentId);
-        const aptDoc = await aptRef.get();
-
-        if (!aptDoc.exists) {
-            throw new HttpsError('not-found', 'Randevu bulunamadı.');
-        }
-
-        const apt = aptDoc.data() as Appointment;
-
-        if (role === 'coach' && apt.coachId !== request.auth.uid) {
-            throw new HttpsError('permission-denied', 'Bu randevu size ait değil.');
-        }
-
-        if (apt.status === 'completed') {
-            throw new HttpsError(
-                'failed-precondition',
-                'Tamamlanmış randevular iptal edilemez.'
-            );
-        }
-
-        if (apt.status === 'cancelled') {
-            throw new HttpsError(
-                'failed-precondition',
-                'Bu randevu zaten iptal edilmiş.'
-            );
-        }
-
         const now = admin.firestore.Timestamp.now();
 
-        // Randevuyu iptal et — paketten seans DÜŞMEZ
-        await aptRef.update({
-            status: 'cancelled',
-            cancelledAt: now,
-            cancellationReason: data.reason || '',
-            updatedAt: now
+        // Appointment iptal + subscription counter decrement'i atomik yap.
+        const apt = await db.runTransaction(async (tx) => {
+            const aptDoc = await tx.get(aptRef);
+            if (!aptDoc.exists) {
+                throw new HttpsError('not-found', 'Randevu bulunamadı.');
+            }
+            const aptData = aptDoc.data() as Appointment;
+
+            if (role === 'coach' && aptData.coachId !== request.auth!.uid) {
+                throw new HttpsError('permission-denied', 'Bu randevu size ait değil.');
+            }
+            if (aptData.status === 'completed') {
+                throw new HttpsError(
+                    'failed-precondition',
+                    'Tamamlanmış randevular iptal edilemez.'
+                );
+            }
+            if (aptData.status === 'cancelled') {
+                throw new HttpsError(
+                    'failed-precondition',
+                    'Bu randevu zaten iptal edilmiş.'
+                );
+            }
+
+            // Randevuyu iptal et — paketten seans DÜŞMEZ
+            tx.update(aptRef, {
+                status: 'cancelled',
+                cancelledAt: now,
+                cancellationReason: data.reason || '',
+                updatedAt: now,
+            });
+
+            // scheduledSessionsCount: pending/postponed slotlar sayılıyor. Cancelled sayılmıyor.
+            // Dolayısıyla pending/postponed → cancelled transition'ında counter -1.
+            // Counter yoksa dokunma (migration sonrası düzelir).
+            if (aptData.subscriptionId && (aptData.status === 'pending' || aptData.status === 'postponed')) {
+                const subRef = db.collection(COLLECTIONS.SUBSCRIPTIONS).doc(aptData.subscriptionId);
+                const subDoc = await tx.get(subRef);
+                if (subDoc.exists && typeof subDoc.data()?.scheduledSessionsCount === 'number') {
+                    tx.update(subRef, {
+                        scheduledSessionsCount: admin.firestore.FieldValue.increment(-1),
+                        updatedAt: now,
+                    });
+                }
+            }
+
+            return aptData;
         });
 
         // Sistem eventi yaz
@@ -108,7 +123,7 @@ export const cancelAppointment = onCall(async (request) => {
         return { success: true, message: 'Randevu başarıyla iptal edildi.' };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'cancelAppointment',
             error,
             userId: request.auth?.uid,

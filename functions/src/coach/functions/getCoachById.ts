@@ -53,7 +53,7 @@ export const getCoachById = onCall(async (request) => {
             coach: serializeTimestamps(coachData)
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getCoachById',
             error,
             userId: request.auth?.uid,

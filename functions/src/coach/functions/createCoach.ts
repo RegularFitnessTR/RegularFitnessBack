@@ -96,7 +96,7 @@ export const createCoach = onCall(async (request) => {
     } catch (error: any) {
         console.error("Hoca oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createCoach',
             error,
             userId: request.auth?.uid,

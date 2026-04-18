@@ -50,7 +50,7 @@ export const markNotificationAsRead = onCall(async (request) => {
     } catch (error: any) {
         console.error("Bildirim okundu işaretleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: "markNotificationAsRead",
             error,
             userId: uid,

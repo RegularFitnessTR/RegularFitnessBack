@@ -184,7 +184,7 @@ export const getPaymentRequests = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getPaymentRequests',
             error,
             userId: request.auth?.uid,

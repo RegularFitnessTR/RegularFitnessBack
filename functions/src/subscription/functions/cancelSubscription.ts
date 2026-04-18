@@ -150,7 +150,7 @@ export const cancelSubscription = onCall(async (request) => {
         return { success: true, message: 'Abonelik iptal edildi.' };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'cancelSubscription',
             error,
             userId: request.auth?.uid,

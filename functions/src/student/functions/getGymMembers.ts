@@ -56,7 +56,7 @@ export const getGymMembers = onCall(async (request) => {
             members
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getGymMembers',
             error,
             userId: request.auth?.uid,

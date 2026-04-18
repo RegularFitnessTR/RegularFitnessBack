@@ -159,6 +159,19 @@ export const updateAppointmentsPlan = onCall(async (request) => {
 
         editableAppointments.forEach((doc) => batch.delete(doc.ref));
 
+        // Counter delta: silinen non-cancelled (slot kaplayan) sayısını çıkar,
+        // yeni eklenenleri ekle. Counter yoksa migration sonrası düzelir.
+        const editableNonCancelledCount = editableAppointments.filter(
+            (doc) => doc.data().status !== 'cancelled'
+        ).length;
+        const counterDelta = data.appointments.length - editableNonCancelledCount;
+        if (counterDelta !== 0 && typeof sub.scheduledSessionsCount === 'number') {
+            batch.update(subDoc.ref, {
+                scheduledSessionsCount: admin.firestore.FieldValue.increment(counterDelta),
+                updatedAt: now,
+            });
+        }
+
         data.appointments.forEach((apt, index) => {
             const aptRef = db.collection(COLLECTIONS.APPOINTMENTS).doc();
             const newAppointment: Appointment = {
@@ -216,7 +229,7 @@ export const updateAppointmentsPlan = onCall(async (request) => {
             newCount: data.appointments.length
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'updateAppointmentsPlan',
             error,
             userId: request.auth?.uid,

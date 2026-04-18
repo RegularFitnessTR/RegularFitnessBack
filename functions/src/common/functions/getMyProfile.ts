@@ -4,12 +4,46 @@ import { onCall, HttpsError } from "../utils/onCall";
 import { serializeTimestamps } from "../utils/serialize";
 import { logError } from "../../log/utils/logError";
 
-const PROFILE_RESOLUTION_ORDER = [
+const ROLE_TO_COLLECTION: Record<string, string> = {
+    admin: COLLECTIONS.ADMINS,
+    coach: COLLECTIONS.COACHES,
+    student: COLLECTIONS.STUDENTS,
+    superadmin: COLLECTIONS.SUPERADMINS,
+};
+
+// Role claim eksik / geçersiz olduğunda fallback için: tüm collection'ları paralel kontrol et.
+const FALLBACK_RESOLUTION_ORDER = [
     { collection: COLLECTIONS.ADMINS, role: 'admin' as const },
     { collection: COLLECTIONS.COACHES, role: 'coach' as const },
     { collection: COLLECTIONS.STUDENTS, role: 'student' as const },
     { collection: COLLECTIONS.SUPERADMINS, role: 'superadmin' as const },
 ];
+
+async function resolveProfileByRoleClaim(uid: string, role: string) {
+    const collection = ROLE_TO_COLLECTION[role];
+    if (!collection) return null;
+    const doc = await db.collection(collection).doc(uid).get();
+    if (!doc.exists) return null;
+    return { collection, role: role as 'admin' | 'coach' | 'student' | 'superadmin', doc };
+}
+
+async function resolveProfileFallback(uid: string) {
+    // Role claim yoksa veya yanlışsa: tüm collection'ları paralel okuyup ilk match'i al.
+    // Sıralı for-loop'a göre çok daha hızlı (4 RPC sequential → 1 RPC parallel duration).
+    const results = await Promise.all(
+        FALLBACK_RESOLUTION_ORDER.map((entry) =>
+            db.collection(entry.collection).doc(uid).get()
+                .then((doc) => ({ entry, doc }))
+                .catch(() => null)
+        )
+    );
+    for (const result of results) {
+        if (result && result.doc.exists) {
+            return { collection: result.entry.collection, role: result.entry.role, doc: result.doc };
+        }
+    }
+    return null;
+}
 
 export const getMyProfile = onCall(async (request) => {
     if (!request.auth) {
@@ -17,57 +51,69 @@ export const getMyProfile = onCall(async (request) => {
     }
 
     const uid = request.auth.uid;
+    const claimRole = typeof request.auth.token.role === 'string' ? request.auth.token.role : '';
 
     try {
-        for (const entry of PROFILE_RESOLUTION_ORDER) {
-            const doc = await db.collection(entry.collection).doc(uid).get();
-            if (!doc.exists) {
-                continue;
-            }
-
-            const user: any = serializeTimestamps(doc.data());
-
-            if (entry.role === 'student' || entry.role === 'coach') {
-                const gymId = user?.gymId;
-                if (gymId) {
-                    try {
-                        const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
-                        user.gymName = gymDoc.exists ? (gymDoc.data()?.name ?? null) : null;
-                    } catch {
-                        user.gymName = null;
-                    }
-                }
-            }
-
-            if (entry.role === 'student') {
-                const coachId = user?.coachId;
-                if (coachId) {
-                    try {
-                        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
-                        if (coachDoc.exists) {
-                            const c = coachDoc.data();
-                            const full = [c?.firstName, c?.lastName].filter(Boolean).join(' ').trim();
-                            user.coachName = full.length > 0 ? full : null;
-                        } else {
-                            user.coachName = null;
-                        }
-                    } catch {
-                        user.coachName = null;
-                    }
-                }
-            }
-
-            return {
-                success: true,
-                role: entry.role,
-                collection: entry.collection,
-                user
-            };
+        // Önce JWT claim'deki role'e göre tek doğrudan lookup dene.
+        // Eski (claim'siz) kullanıcılar için fallback'e düş.
+        let resolved = claimRole ? await resolveProfileByRoleClaim(uid, claimRole) : null;
+        if (!resolved) {
+            resolved = await resolveProfileFallback(uid);
         }
 
-        throw new HttpsError('not-found', 'Kullanıcı profili bulunamadı.');
+        if (!resolved) {
+            throw new HttpsError('not-found', 'Kullanıcı profili bulunamadı.');
+        }
+
+        const { collection, role, doc } = resolved;
+        const user: any = serializeTimestamps(doc.data());
+
+        // Student için gym + coach enrichment'ı paralel yap; coach için sadece gym.
+        if (role === 'student') {
+            const gymId = user?.gymId;
+            const coachId = user?.coachId;
+
+            const [gymDoc, coachDoc] = await Promise.all([
+                gymId
+                    ? db.collection(COLLECTIONS.GYMS).doc(gymId).get().catch(() => null)
+                    : Promise.resolve(null),
+                coachId
+                    ? db.collection(COLLECTIONS.COACHES).doc(coachId).get().catch(() => null)
+                    : Promise.resolve(null),
+            ]);
+
+            if (gymId) {
+                user.gymName = gymDoc?.exists ? (gymDoc.data()?.name ?? null) : null;
+            }
+            if (coachId) {
+                if (coachDoc?.exists) {
+                    const c = coachDoc.data();
+                    const full = [c?.firstName, c?.lastName].filter(Boolean).join(' ').trim();
+                    user.coachName = full.length > 0 ? full : null;
+                } else {
+                    user.coachName = null;
+                }
+            }
+        } else if (role === 'coach') {
+            const gymId = user?.gymId;
+            if (gymId) {
+                try {
+                    const gymDoc = await db.collection(COLLECTIONS.GYMS).doc(gymId).get();
+                    user.gymName = gymDoc.exists ? (gymDoc.data()?.name ?? null) : null;
+                } catch {
+                    user.gymName = null;
+                }
+            }
+        }
+
+        return {
+            success: true,
+            role,
+            collection,
+            user,
+        };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getMyProfile',
             error,
             userId: uid,

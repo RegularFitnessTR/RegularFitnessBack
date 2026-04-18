@@ -89,7 +89,7 @@ export const getGymPresence = onCall(async (request) => {
             records
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getGymPresence',
             error,
             userId: request.auth?.uid,

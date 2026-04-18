@@ -64,39 +64,44 @@ export const getStudentSchedule = onCall(async (request) => {
                 .orderBy('sessionNumber', 'asc')
                 .get();
 
-            const needsCoachFallback = appointmentsQuery.docs.some((doc) => {
-                const coachName = doc.data().coachName;
-                return !(typeof coachName === 'string' && coachName.trim().length > 0);
-            });
+            // coachName eksik olan appointment'lar için benzersiz coachId'leri topla
+            // ve tek seferde batch getAll ile coach isimlerini çek (N+1 önlemi + correctness:
+            // farklı coachId'leri ayrı coach isimlerine map'le).
+            const missingCoachIds = [...new Set(
+                appointmentsQuery.docs
+                    .filter((doc) => {
+                        const cn = doc.data().coachName;
+                        return !(typeof cn === 'string' && cn.trim().length > 0);
+                    })
+                    .map((doc) => (doc.data().coachId as string | undefined) || studentData.coachId)
+                    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+            )];
 
-            let fallbackCoachName = '';
-            if (needsCoachFallback) {
-                const fallbackCoachId =
-                    (appointmentsQuery.docs.find((doc) => {
-                        const coachName = doc.data().coachName;
-                        return !(typeof coachName === 'string' && coachName.trim().length > 0);
-                    })?.data().coachId as string | undefined)
-                    || studentData.coachId;
-
-                if (fallbackCoachId) {
-                    const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(fallbackCoachId).get();
+            const coachNameMap: Record<string, string> = {};
+            if (missingCoachIds.length > 0) {
+                const refs = missingCoachIds.map((cid) => db.collection(COLLECTIONS.COACHES).doc(cid));
+                const coachDocs = await db.getAll(...refs);
+                coachDocs.forEach((coachDoc) => {
                     if (coachDoc.exists) {
-                        const coachData = coachDoc.data()!;
-                        fallbackCoachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                        const c = coachDoc.data()!;
+                        coachNameMap[coachDoc.id] = `${c.firstName || ''} ${c.lastName || ''}`.trim();
                     }
-                }
+                });
             }
 
             const appointments = appointmentsQuery.docs.map((doc) => {
                 const data = doc.data() as Record<string, any>;
-                const denormCoachName =
+                let coachName =
                     typeof data.coachName === 'string' && data.coachName.trim().length > 0
                         ? data.coachName
-                        : fallbackCoachName;
-
+                        : '';
+                if (!coachName) {
+                    const cid = (data.coachId as string | undefined) || studentData.coachId;
+                    coachName = cid ? (coachNameMap[cid] || '') : '';
+                }
                 return serializeTimestamps({
                     ...data,
-                    coachName: denormCoachName || ''
+                    coachName: coachName || ''
                 });
             });
 
@@ -164,7 +169,7 @@ export const getStudentSchedule = onCall(async (request) => {
         }
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getStudentSchedule',
             error,
             userId: request.auth?.uid,

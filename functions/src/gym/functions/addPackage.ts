@@ -88,7 +88,7 @@ export const addPackage = onCall(async (request) => {
     } catch (error: any) {
         console.error("Paket ekleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'addPackage',
             error,
             userId: request.auth?.uid,

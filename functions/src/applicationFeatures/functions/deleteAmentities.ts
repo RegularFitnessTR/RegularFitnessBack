@@ -66,7 +66,7 @@ export const deleteAmenities = onCall(async (request) => {
     } catch (error: any) {
         console.error("İmkan silme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'deleteAmenities',
             error,
             userId: request.auth?.uid,

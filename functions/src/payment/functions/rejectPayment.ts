@@ -106,7 +106,7 @@ export const rejectPayment = onCall(async (request) => {
     } catch (error: any) {
         console.error("Ödeme reddetme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'rejectPayment',
             error,
             userId: request.auth?.uid,

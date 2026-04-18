@@ -101,7 +101,7 @@ export const registerAdmin = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'registerAdmin',
             error,
             requestData: {

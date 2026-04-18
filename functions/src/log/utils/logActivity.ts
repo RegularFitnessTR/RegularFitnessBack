@@ -58,7 +58,7 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
         console.warn("[ActivityLog] Log kaydı yazılamadı:", error);
 
         // Ana iş akışını bozmadan activity log kaybını izlenebilir hale getir.
-        await logError({
+        void logError({
             functionName: "logActivity",
             error,
             userId: params.performedBy.uid,

@@ -76,7 +76,7 @@ export const deleteWorkoutSchedule = onCall(async (request) => {
         return { success: true, message: 'Çalışma programı başarıyla silindi.' };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'deleteWorkoutSchedule',
             error,
             userId: request.auth?.uid,

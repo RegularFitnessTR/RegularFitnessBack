@@ -306,7 +306,7 @@ export const assignSubscription = onCall(async (request) => {
         };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'assignSubscription',
             error,
             userId: request.auth?.uid,

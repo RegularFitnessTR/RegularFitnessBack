@@ -132,7 +132,7 @@ export const updateCoach = onCall(async (request) => {
     } catch (error: any) {
         console.error("Hoca güncelleme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'updateCoach',
             error,
             userId: request.auth?.uid,

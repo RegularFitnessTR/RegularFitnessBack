@@ -86,7 +86,7 @@ export const registerSuperAdmin = onCall(async (request) => {
     } catch (error: any) {
         console.error("Superadmin kayıt hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'registerSuperAdmin',
             error,
             requestData: data

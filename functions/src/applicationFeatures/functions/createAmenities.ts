@@ -63,7 +63,7 @@ export const createAmenities = onCall(async (request) => {
     } catch (error: any) {
         console.error("İmkan oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createAmenities',
             error,
             userId: request.auth?.uid,

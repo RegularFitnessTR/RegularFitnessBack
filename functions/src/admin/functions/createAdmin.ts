@@ -83,7 +83,7 @@ export const createAdmin = onCall(async (request) => {
     } catch (error: any) {
         console.error("Admin oluşturma hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'createAdmin',
             error,
             userId: request.auth?.uid,

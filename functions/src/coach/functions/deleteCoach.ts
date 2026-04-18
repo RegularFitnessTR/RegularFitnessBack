@@ -73,7 +73,7 @@ export const deleteCoach = onCall(async (request) => {
     } catch (error: any) {
         console.error("Hoca silme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'deleteCoach',
             error,
             userId: request.auth?.uid,

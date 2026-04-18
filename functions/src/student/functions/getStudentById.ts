@@ -47,7 +47,7 @@ export const getStudentById = onCall(async (request) => {
             student: serializeTimestamps(studentData)
         };
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getStudentById',
             error,
             userId: request.auth?.uid,

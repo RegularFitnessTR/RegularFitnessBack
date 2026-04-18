@@ -71,7 +71,7 @@ export const deleteAdmin = onCall(async (request) => {
     } catch (error: any) {
         console.error("Admin silme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'deleteAdmin',
             error,
             userId: request.auth?.uid,

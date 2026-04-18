@@ -104,7 +104,7 @@ export const postponeAppointment = onCall(async (request) => {
         return { success: true, message: 'Randevu başarıyla ertelendi.' };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'postponeAppointment',
             error,
             userId: request.auth?.uid,

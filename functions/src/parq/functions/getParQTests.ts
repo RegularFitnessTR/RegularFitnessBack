@@ -48,7 +48,7 @@ export const getParQTests = onCall(async (request) => {
     } catch (error: any) {
         console.error("ParQ testlerini getirme hatası:", error);
 
-        await logError({
+        void logError({
             functionName: 'getParQTests',
             error,
             userId: request.auth?.uid,

@@ -158,7 +158,7 @@ export const completeAppointment = onCall(async (request) => {
         return { success: true, message: 'Seans başarıyla tamamlandı.' };
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'completeAppointment',
             error,
             userId: request.auth?.uid,

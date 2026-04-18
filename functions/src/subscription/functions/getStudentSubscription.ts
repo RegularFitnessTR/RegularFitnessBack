@@ -101,7 +101,7 @@ export const getStudentSubscription = onCall(async (request) => {
         }
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getStudentSubscription',
             error,
             userId: request.auth?.uid,

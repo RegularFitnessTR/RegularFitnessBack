@@ -5,3 +5,4 @@ export * from './types/superadmin.dto';
 // Functions
 export * from './functions/register';
 export * from './functions/migrateGymClaims';
+export * from './functions/migrateSubscriptionCounters';

@@ -148,7 +148,7 @@ export const getCoachSchedules = onCall(async (request) => {
         }
 
     } catch (error: any) {
-        await logError({
+        void logError({
             functionName: 'getCoachSchedules',
             error,
             userId: request.auth?.uid,
