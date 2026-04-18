@@ -2,8 +2,6 @@ import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../
 import { logError } from "../../log/utils/logError";
 import { GetCoachMembersData } from "../types/student.dto";
 
-const HOT_LIST_OPTIONS = { minInstances: 1 } as const;
-
 function parseLimit(rawLimit: unknown): number {
     const requested = Number(rawLimit ?? 100);
     if (Number.isNaN(requested)) {
@@ -12,7 +10,7 @@ function parseLimit(rawLimit: unknown): number {
     return Math.min(Math.max(requested, 1), 200);
 }
 
-export const getCoachMembers = onCall(HOT_LIST_OPTIONS, async (request) => {
+export const getCoachMembers = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
     }

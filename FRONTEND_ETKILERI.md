@@ -252,7 +252,7 @@ await firebase.auth().currentUser?.getIdToken(true)
 
 ---
 
-### S4 — Hot endpoint'lerde `minInstances=1`
+### S4 — Hot endpoint warm strategy (opsiyonel, şu an kapalı)
 **Tarih:** 2026-04-18
 **Backend dosyaları:**
 - `functions/src/common/functions/getMyProfile.ts`
@@ -260,12 +260,13 @@ await firebase.auth().currentUser?.getIdToken(true)
 - `functions/src/student/functions/getCoachMembers.ts`
 - `functions/src/coach/functions/getGymCoaches.ts`
 
-#### 🟢 Performans
-**Etkilenen endpoint'ler:** `getMyProfile`, `getGymMembers`, `getCoachMembers`, `getGymCoaches`
+#### ℹ️ Bilgi
+**Durum:** Ücretsiz mod için `minInstances` aktif değil.
+**Etkilenen endpoint'ler (aktif edilirse):** `getMyProfile`, `getGymMembers`, `getCoachMembers`, `getGymCoaches`
 
 **Frontend için yapılması gereken:** **HİÇBİR ŞEY**
 - API kontratı değişmedi.
-- Özellikle ilk açılış / boş liste sorgularında daha stabil ve hızlı cevap beklenir.
+- Aktivasyon yapılırsa ilk açılış / boş liste sorgularında daha stabil ve hızlı cevap beklenir.
 
 ---
 

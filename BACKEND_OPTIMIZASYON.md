@@ -16,7 +16,7 @@
 |---|---|---|---|---|
 | 🔴 Kritik | 6 | 6 | 0 | — |
 | 🟡 Orta | 3 | 3 | 0 | — |
-| 🟢 Küçük | 4 | 1 | 3 | ~0.1-0.2s |
+| 🟢 Küçük | 4 | 0 | 4 | ~0.1-0.3s |
 
 **🎉 Kritik + orta maddeler tamamlandı!** Backend cevap süreleri 2-6s aralığından beklenen 0.5-1.2s aralığına düşmüş olmalı (cold start hariç).
 
@@ -215,24 +215,21 @@ Firebase Cloud Functions response döndükten sonra background promise'lerin tam
 **Çözüm:** Structured logger (Pino veya Cloud Logging direct).
 **Frontend etkisi:** Yok
 
-### ✅ S4. Cold start azaltımı için hot endpoint'lerde `minInstances=1`
+### ⏳ S4. Cold start azaltımı için hot endpoint warm stratejisi (opsiyonel)
 **Dosyalar:**
 - `functions/src/common/utils/onCall.ts`
 - `functions/src/common/functions/getMyProfile.ts`
 - `functions/src/student/functions/getGymMembers.ts`
 - `functions/src/student/functions/getCoachMembers.ts`
 - `functions/src/coach/functions/getGymCoaches.ts`
-**Tamamlandı:** 2026-04-18
-**Yapılan:**
-- `onCall` wrapper'ı callable options alacak şekilde genişletildi
-- Sık kullanılan listeleme/profil endpoint'lerine fonksiyon bazlı `minInstances: 1` tanımlandı
-- Global `minInstances` verilmedi; maliyet artışı yalnız hot path ile sınırlandı
+**Durum:** Ücretsiz mod için `minInstances` şu an kapalı tutuluyor.
+**Not:** `onCall` wrapper callable options destekli kaldı; ileride yalnız kritik endpoint'lerde seçici olarak açılabilir.
 
-**Beklenen kazanç:** Cold start etkisinde ~1.0-2.5s iyileşme (özellikle boş liste sorgularında)
+**Beklenen kazanç (açılırsa):** Cold start etkisinde ~1.0-2.5s iyileşme (özellikle boş liste sorgularında)
 
-**Risk / Trade-off:** Düşük-ORTA — sürekli warm instance maliyeti artar
+**Risk / Trade-off:** ORTA — sürekli warm instance maliyeti artar
 
-**Frontend etkisi:** İlk istekler daha stabil/hızlı; response shape değişmez
+**Frontend etkisi:** Açıldığında ilk istekler daha stabil/hızlı; response shape değişmez
 
 ---
 
@@ -242,7 +239,7 @@ Firebase Cloud Functions response döndükten sonra background promise'lerin tam
 - **2026-04-18:** publicId için Firestore index eklenmesi düşünülmüştü, ancak tek-alan equality query'leri için Firestore otomatik index oluşturduğundan iptal edildi. Gerçek kazanç publicId'yi document ID olarak kullanmak (`.doc(publicId)`) olur — büyük migration, şimdilik kapsam dışı.
 
 ### Sıradaki Hedef
-**S1, S2, S3, S4 (Küçük iyileştirmeler).** Kritik ve orta maddeler tamamlandı. Bir sonraki iterasyon staging/prod konfigürasyon iyileştirmeleri ve cold-start azaltma üzerine.
+**S1, S2, S3 (Küçük iyileştirmeler).** S4 maliyet trade-off nedeniyle opsiyonel tutuluyor. Kritik ve orta maddeler tamamlandı.
 
 **Deploy sonrası ops adımı:** `migrateSubscriptionCounters` bir kez superadmin'den çağrılmalı (idempotent, eski subscription'ların counter'ını backfill eder).
 
