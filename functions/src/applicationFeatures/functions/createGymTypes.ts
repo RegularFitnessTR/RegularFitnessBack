@@ -77,7 +77,7 @@ export const createGymTypes = onCall(async (request) => {
         }, { merge: true });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_GYM_TYPES,
             category: LogCategory.APPLICATION_FEATURES,
             performedBy: {

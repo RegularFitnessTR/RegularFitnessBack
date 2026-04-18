@@ -63,7 +63,7 @@ export const deletePackage = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_PACKAGE,
             category: LogCategory.GYM,
             performedBy: {

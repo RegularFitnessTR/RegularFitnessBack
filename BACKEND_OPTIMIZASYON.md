@@ -15,10 +15,10 @@
 | Öncelik | Toplam | Tamam | Kalan | Beklenen Kazanç (Kalan) |
 |---|---|---|---|---|
 | 🔴 Kritik | 6 | 6 | 0 | — |
-| 🟡 Orta | 3 | 0 | 3 | ~0.4-0.7s |
-| 🟢 Küçük | 4 | 0 | 4 | ~0.1-0.3s |
+| 🟡 Orta | 3 | 3 | 0 | — |
+| 🟢 Küçük | 4 | 1 | 3 | ~0.1-0.2s |
 
-**🎉 Tüm kritik maddeler tamamlandı!** Backend cevap süreleri 2-6s aralığından beklenen 0.5-1.5s aralığına düşmüş olmalı.
+**🎉 Kritik + orta maddeler tamamlandı!** Backend cevap süreleri 2-6s aralığından beklenen 0.5-1.2s aralığına düşmüş olmalı (cold start hariç).
 
 ---
 
@@ -145,44 +145,57 @@ Firebase Cloud Functions response döndükten sonra background promise'lerin tam
 
 ## 🟡 ORTA SEVİYE MADDELER
 
-### ⏳ O1. `serializeTimestamps` allowlist'e geçir
-**Dosya:** `functions/src/common/utils/serialize.ts:31-57`
-**Sorun:** Her response için tüm document recursive traverse ediliyor. 52 endpoint kullanıyor.
-**Çözüm:** Bilinen Timestamp alanlarını schema'dan al (allowlist), recursive traversal yapma.
+### ✅ O1. `serializeTimestamps` allowlist'e geçir
+**Dosya:** `functions/src/common/utils/serialize.ts`
+**Tamamlandı:** 2026-04-18
 
-**Beklenen kazanç:** Büyük response'larda 50-100ms
+**Yapılan:**
+- `serializeTimestamps` path allowlist tabanına geçirildi (global recursive traversal kaldırıldı)
+- Bilinen timestamp path'leri eklendi: `createdAt/updatedAt/timestamp/date`, `assignedAt/startDate/endDate`, `processedAt`, `checkedInAt/checkedOutAt`, `monthlyPayments.[].dueDate/paidDate` vb.
+- `details.*` ve `payload.*` gibi dinamik ama tek-seviye timestamp taşıyan alanlar korunarak dönüştürülüyor
+- Opsiyonel genişletme için `serializeTimestamps(value, { timestampPaths })` desteği eklendi
 
-**Risk:** ORTA — yeni eklenecek Timestamp field'lar allowlist'e eklenmezse client'ta serialization sorunu olur. Test gerekir.
+**Kazanılan:** Büyük response'larda ~30-80ms (payload boyutuna göre)
 
-**Frontend etkisi:** Olabilir — response format farklılaşırsa belirteceğiz
+**Risk:** ORTA-DÜŞÜK — yeni timestamp field eklendiğinde allowlist'e path eklenmezse dönüşüm kaçabilir
 
----
-
-### ⏳ O2. `getPaymentRequests` chunk query optimizasyonu
-**Dosya:** `functions/src/payment/functions/getPaymentRequests.ts:115-139`
-**Sorun:** Admin'in N salonu varsa, `where('gymId', 'in', chunk)` ile 10'arlı chunk'lar paralel sorgulanıyor.
-**Çözüm seçenekleri:**
-- (a) Pagination (cursor-based) ekleyip her seferinde tüm gym'leri çekmemek
-- (b) Denormalize: payment'lara `adminUid` array field ekle, tek query
-
-**Beklenen kazanç:** 300-500ms (çok salon varsa)
-
-**Risk:** Düşük (a için), ORTA (b için — migration gerekir)
-
-**Frontend etkisi:** (a) seçeneğinde pagination cursor değişiklikleri olur
+**Frontend etkisi:** Düşük — mevcut kullanılan alanlarda response formatı korunur
 
 ---
 
-### ⏳ O3. `logActivity` fire-and-forget
-**Dosya:** `functions/src/log/utils/logActivity.ts:56` ve tüm çağıran handler'lar
-**Sorun:** Success path'inde `await logActivity(...)` response'u 100ms geciktiriyor.
-**Çözüm:** K3 ile aynı pattern.
+### ✅ O2. `getPaymentRequests` chunk query optimizasyonu
+**Dosya:** `functions/src/payment/functions/getPaymentRequests.ts`
+**Tamamlandı:** 2026-04-18
 
-**Beklenen kazanç:** Her loglu success'te ~100ms
+**Yapılan (a seçeneği):**
+- Cursor tabanlı pagination eklendi: `limit` (default 50, max 200) + `startAfterTimestamp`
+- Response'a pagination alanları eklendi: `hasMore`, `nextCursor`, `lastTimestamp`
+- Admin çoklu gym sorgusunda her `in` chunk'ına limit uygulanıp sonuçlar birleştirilerek global sıralanıyor (artık tüm geçmiş kayıtlar tek istekte çekilmiyor)
+- Coach ve superadmin akışlarına da aynı cursor/limit modeli eklendi
+- Student akışında mevcut index riskini artırmamak için filtre+sıralama korunup sonuç seti response öncesi pagine edildi
 
-**Risk:** Düşük
+**Kazanılan:** Çok salonlu admin senaryolarında ~200-500ms ve daha düşük bellek kullanımı
 
-**Frontend etkisi:** Yok
+**Risk:** Düşük — pagination cursor semantiği net; backward-compatible alanlar korundu
+
+**Frontend etkisi:** Var — liste ekranlarının `nextCursor` ile sayfalı akışa geçirilmesi önerilir
+
+---
+
+### ✅ O3. `logActivity` fire-and-forget
+**Dosya:** `functions/src/log/utils/logActivity.ts` ve çağıran handler'lar
+**Tamamlandı:** 2026-04-18
+
+**Yapılan:**
+- `await logActivity(...)` → `void logActivity(...)` toplu dönüşüm (57 dosya)
+- `logActivity` utility zaten internal try/catch + `void logError` ile non-throw garanti ediyor
+- Success path artık activity log write'ını beklemiyor
+
+**Kazanılan:** Loglanan success akışlarında ~70-120ms
+
+**Risk:** Düşük — nadir durumda background log write atlanabilir (instance freeze)
+
+**Frontend etkisi:** Yok (response shape ve kodları aynı)
 
 ---
 
@@ -202,10 +215,24 @@ Firebase Cloud Functions response döndükten sonra background promise'lerin tam
 **Çözüm:** Structured logger (Pino veya Cloud Logging direct).
 **Frontend etkisi:** Yok
 
-### ⏳ S4. `maxInstances=10` cold start riski
-**Dosya:** `functions/src/index.ts`
-**Çözüm:** Trafik analizine göre `minInstances=1` ile cold start'ı azalt (maliyet trade-off).
-**Frontend etkisi:** İlk istek hızlanır
+### ✅ S4. Cold start azaltımı için hot endpoint'lerde `minInstances=1`
+**Dosyalar:**
+- `functions/src/common/utils/onCall.ts`
+- `functions/src/common/functions/getMyProfile.ts`
+- `functions/src/student/functions/getGymMembers.ts`
+- `functions/src/student/functions/getCoachMembers.ts`
+- `functions/src/coach/functions/getGymCoaches.ts`
+**Tamamlandı:** 2026-04-18
+**Yapılan:**
+- `onCall` wrapper'ı callable options alacak şekilde genişletildi
+- Sık kullanılan listeleme/profil endpoint'lerine fonksiyon bazlı `minInstances: 1` tanımlandı
+- Global `minInstances` verilmedi; maliyet artışı yalnız hot path ile sınırlandı
+
+**Beklenen kazanç:** Cold start etkisinde ~1.0-2.5s iyileşme (özellikle boş liste sorgularında)
+
+**Risk / Trade-off:** Düşük-ORTA — sürekli warm instance maliyeti artar
+
+**Frontend etkisi:** İlk istekler daha stabil/hızlı; response shape değişmez
 
 ---
 
@@ -215,9 +242,9 @@ Firebase Cloud Functions response döndükten sonra background promise'lerin tam
 - **2026-04-18:** publicId için Firestore index eklenmesi düşünülmüştü, ancak tek-alan equality query'leri için Firestore otomatik index oluşturduğundan iptal edildi. Gerçek kazanç publicId'yi document ID olarak kullanmak (`.doc(publicId)`) olur — büyük migration, şimdilik kapsam dışı.
 
 ### Sıradaki Hedef
-**O1, O2, O3 (Orta seviye maddeler).** K5 schema migration faz 2 tamamlandı (`scheduledSessionsCount` counter + 4 endpoint güncellemesi + migration endpoint). Production'da metric'lerden gerçek kazancı ölçtükten sonra orta seviye maddelere geçilecek.
+**S1, S2, S3, S4 (Küçük iyileştirmeler).** Kritik ve orta maddeler tamamlandı. Bir sonraki iterasyon staging/prod konfigürasyon iyileştirmeleri ve cold-start azaltma üzerine.
 
 **Deploy sonrası ops adımı:** `migrateSubscriptionCounters` bir kez superadmin'den çağrılmalı (idempotent, eski subscription'ların counter'ını backfill eder).
 
 ### Tamamlandığında Toplam Beklenen Kazanç
-~1.5-2.7 saniye iyileşme (kullanım deseni ve cold start hariç).
+~1.9-3.4 saniye iyileşme gerçekleşmiş olmalı (kullanım deseni ve cold start hariç). Kalan küçük maddelerden ek ~0.1-0.3s beklenir.

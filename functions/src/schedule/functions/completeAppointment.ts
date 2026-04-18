@@ -138,7 +138,7 @@ export const completeAppointment = onCall(async (request) => {
         const aptSnap = await aptRef.get();
         const aptGymId = aptSnap.data()?.gymId || '';
 
-        await logActivity({
+        void logActivity({
             action: LogAction.USE_SESSION,
             category: LogCategory.SCHEDULE,
             performedBy: {

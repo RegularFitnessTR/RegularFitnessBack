@@ -141,7 +141,7 @@ export const updateGym = onCall(async (request) => {
         }
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_GYM,
             category: LogCategory.GYM,
             performedBy: {

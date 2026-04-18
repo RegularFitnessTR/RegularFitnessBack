@@ -84,7 +84,7 @@ export const updateWorkoutSchedule = onCall(async (request) => {
 
         await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(data.scheduleId).update(updates);
 
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {

@@ -145,7 +145,7 @@ export const removeCoachFromGym = onCall(async (request) => {
         // Custom claims'den gymId'yi temizle
         await syncGymClaims(coachUid, { gymId: '' });
 
-        await logActivity({
+        void logActivity({
             action: LogAction.REMOVE_COACH_FROM_GYM,
             category: LogCategory.COACH,
             performedBy: {

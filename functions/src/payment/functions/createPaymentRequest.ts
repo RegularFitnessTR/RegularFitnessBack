@@ -167,7 +167,7 @@ export const createPaymentRequest = onCall(async (request) => {
             gymId
         });
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_PAYMENT_REQUEST,
             category: LogCategory.PAYMENT,
             performedBy: {

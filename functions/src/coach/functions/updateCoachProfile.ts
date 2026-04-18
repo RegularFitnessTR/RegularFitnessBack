@@ -63,7 +63,7 @@ export const updateCoachProfile = onCall(async (request) => {
         }
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_COACH_PROFILE,
             category: LogCategory.COACH,
             performedBy: {

@@ -43,7 +43,7 @@ export const deleteAmenities = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_AMENITIES,
             category: LogCategory.APPLICATION_FEATURES,
             performedBy: {

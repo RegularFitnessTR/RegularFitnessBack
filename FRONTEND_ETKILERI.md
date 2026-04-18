@@ -183,6 +183,92 @@ await firebase.auth().currentUser?.getIdToken(true)
 
 ---
 
+### O1 — `serializeTimestamps` allowlist-path optimizasyonu
+**Tarih:** 2026-04-18
+**Backend dosyası:** `functions/src/common/utils/serialize.ts`
+
+#### 🟡 Davranışsal (düşük risk)
+**Etkilenen endpoint'ler:** `serializeTimestamps` kullanan tüm read endpoint'ler
+
+**Önceki davranış:** Tüm response nesnesi recursive geziliyor, bulunan tüm `Timestamp` alanları otomatik dönüştürülüyordu.
+
+**Yeni davranış:** Bilinen schema path'leri dönüştürülüyor (`createdAt`, `updatedAt`, `date`, `monthlyPayments[].dueDate` vb.).
+
+**Frontend için yapılması gereken:**
+- Mevcut ekranlar için zorunlu değişiklik yok.
+- Eğer frontend özel bir alanda daha önce implicit dönüştürülen ama artık allowlist'te olmayan bir timestamp kullanıyorsa backend'e path ekletilmeli.
+
+#### 🟢 Performans
+- Büyük payload'larda endpoint cevapları daha hızlı gelir.
+
+---
+
+### O2 — `getPaymentRequests` pagination + chunk query optimizasyonu
+**Tarih:** 2026-04-18
+**Backend dosyası:** `functions/src/payment/functions/getPaymentRequests.ts`
+
+#### 🔴 Breaking — Listeleme artık sayfalı
+**Etkilenen endpoint:** `getPaymentRequests`
+
+**Yeni request alanları:**
+- `limit` (opsiyonel, default: 50, max: 200)
+- `startAfterTimestamp` (opsiyonel, bir önceki sayfanın `nextCursor` değeri)
+
+**Yeni response alanları:**
+- `hasMore`
+- `nextCursor`
+- `lastTimestamp`
+
+**Önemli:** Cursor/pagination uygulanmazsa frontend yalnızca ilk sayfayı görür.
+
+#### iOS için yapılması gerekenler:
+1. İlk çağrıda `limit` gönder (örn. 50).
+2. `hasMore === true` ise bir sonraki çağrıda `startAfterTimestamp = nextCursor` gönder.
+3. Listeyi sayfa sayfa birleştir (append).
+
+#### Web admin (Vite+React) için:
+1. Ödeme listesinde infinite scroll veya "Daha Fazla" butonu ekle.
+2. Zustand/React Query store'unda `nextCursor` state'ini tut.
+3. Filtre (`status`, `gymId`) değişince cursor'ı resetle.
+
+#### 🟢 Performans
+- Özellikle çok salon yöneten adminlerde ilk yanıt süresi ve bellek kullanımı belirgin iyileşir.
+
+---
+
+### O3 — `logActivity` fire-and-forget
+**Tarih:** 2026-04-18
+**Backend dosyaları:** 57 dosyada toplu replace (`await logActivity` → `void logActivity`)
+
+#### 🟢 Performans
+**Etkilenen senaryo:** Başarılı mutation response'ları (log yazan akışlar).
+
+**Frontend için yapılması gereken:** **HİÇBİR ŞEY**
+- Response shape ve hata kodları değişmedi.
+- İşlem sonrası ekran güncellemesi daha hızlı hissedilir.
+
+#### ℹ️ Bilgi
+- Çok nadir durumda activity log write atlanabilir; kullanıcı akışını etkilemez.
+
+---
+
+### S4 — Hot endpoint'lerde `minInstances=1`
+**Tarih:** 2026-04-18
+**Backend dosyaları:**
+- `functions/src/common/functions/getMyProfile.ts`
+- `functions/src/student/functions/getGymMembers.ts`
+- `functions/src/student/functions/getCoachMembers.ts`
+- `functions/src/coach/functions/getGymCoaches.ts`
+
+#### 🟢 Performans
+**Etkilenen endpoint'ler:** `getMyProfile`, `getGymMembers`, `getCoachMembers`, `getGymCoaches`
+
+**Frontend için yapılması gereken:** **HİÇBİR ŞEY**
+- API kontratı değişmedi.
+- Özellikle ilk açılış / boş liste sorgularında daha stabil ve hızlı cevap beklenir.
+
+---
+
 ## Şablonlar (yeni madde eklerken kullan)
 
 ### Şablon: Backend Madde Tamamlandı
@@ -218,7 +304,10 @@ await firebase.auth().currentUser?.getIdToken(true)
   - Uygulama foreground'a geldiğinde (opsiyonel, conservative)
 
 ### API Response Shape
-Backend optimizasyonları **şu an için** response şemalarını değiştirmiyor. Eğer bir madde değiştirirse açıkça not edilecek (örn. O1 — serializeTimestamps).
+Genel olarak response şemaları korunuyor.
+
+İstisna:
+- `getPaymentRequests` artık pagination alanları döndürüyor: `hasMore`, `nextCursor`, `lastTimestamp`.
 
 ### Performans Beklentileri
-Tüm optimizasyonlar tamamlandığında ortalama endpoint cevabı **<1s**'e inecek (cold start hariç). iOS tarafında loading state UX'i bu hıza göre revize edilebilir.
+Kritik + orta optimizasyonlar tamamlandı. Ortalama endpoint cevabı **<1s** hedefi (cold start hariç) büyük ölçüde karşılanmış olmalı. Kalan küçük maddeler tamamlandığında ilk istek deneyimi daha da stabil hale gelir.

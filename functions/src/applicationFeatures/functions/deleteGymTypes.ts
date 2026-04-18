@@ -53,7 +53,7 @@ export const deleteGymTypes = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_GYM_TYPES,
             category: LogCategory.APPLICATION_FEATURES,
             performedBy: {

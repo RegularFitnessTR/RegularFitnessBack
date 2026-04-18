@@ -86,7 +86,7 @@ export const updateStudentProfile = onCall(async (request) => {
         }
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_STUDENT_PROFILE,
             category: LogCategory.STUDENT,
             performedBy: {

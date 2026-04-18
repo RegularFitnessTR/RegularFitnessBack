@@ -80,7 +80,7 @@ export const postponeAppointment = onCall(async (request) => {
             updatedAt: now
         });
 
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {

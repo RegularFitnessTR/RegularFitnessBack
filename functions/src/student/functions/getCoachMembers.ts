@@ -2,6 +2,8 @@ import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../
 import { logError } from "../../log/utils/logError";
 import { GetCoachMembersData } from "../types/student.dto";
 
+const HOT_LIST_OPTIONS = { minInstances: 1 } as const;
+
 function parseLimit(rawLimit: unknown): number {
     const requested = Number(rawLimit ?? 100);
     if (Number.isNaN(requested)) {
@@ -10,7 +12,7 @@ function parseLimit(rawLimit: unknown): number {
     return Math.min(Math.max(requested, 1), 200);
 }
 
-export const getCoachMembers = onCall(async (request) => {
+export const getCoachMembers = onCall(HOT_LIST_OPTIONS, async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
     }
@@ -30,24 +32,26 @@ export const getCoachMembers = onCall(async (request) => {
     const limit = parseLimit(data.limit);
 
     try {
-        const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
-        if (!coachDoc.exists) {
-            throw new HttpsError('not-found', 'Koç bulunamadı.');
-        }
-
-        const coachGymId = coachDoc.data()?.gymId;
-
-        if (role === 'admin') {
-            const adminGymIds: string[] = request.auth.token.gymIds || [];
-            if (!coachGymId || !adminGymIds.includes(coachGymId)) {
-                throw new HttpsError('permission-denied', 'Bu koçun öğrencilerini görüntüleme yetkiniz yok.');
-            }
-        } else if (role === 'coach') {
+        if (role === 'coach') {
             if (coachId !== request.auth.uid) {
                 throw new HttpsError('permission-denied', 'Sadece kendi öğrencilerinizi görüntüleyebilirsiniz.');
             }
-        } else if (role !== 'superadmin') {
-            throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
+        } else {
+            const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(coachId).get();
+            if (!coachDoc.exists) {
+                throw new HttpsError('not-found', 'Koç bulunamadı.');
+            }
+
+            const coachGymId = coachDoc.data()?.gymId;
+
+            if (role === 'admin') {
+                const adminGymIds: string[] = request.auth.token.gymIds || [];
+                if (!coachGymId || !adminGymIds.includes(coachGymId)) {
+                    throw new HttpsError('permission-denied', 'Bu koçun öğrencilerini görüntüleme yetkiniz yok.');
+                }
+            } else if (role !== 'superadmin') {
+                throw new HttpsError('permission-denied', 'Bu işlem için yetkiniz yok.');
+            }
         }
 
         const snapshot = await db.collection(COLLECTIONS.STUDENTS)

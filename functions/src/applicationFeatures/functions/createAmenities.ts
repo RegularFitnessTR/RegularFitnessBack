@@ -39,7 +39,7 @@ export const createAmenities = onCall(async (request) => {
         }, { merge: true });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_AMENITIES,
             category: LogCategory.APPLICATION_FEATURES,
             performedBy: {

@@ -163,7 +163,7 @@ export const approvePayment = onCall(async (request) => {
             gymId: payment.gymId
         });
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.APPROVE_PAYMENT,
             category: LogCategory.PAYMENT,
             performedBy: {

@@ -131,7 +131,7 @@ export const cancelSubscription = onCall(async (request) => {
             }
         }
 
-        await logActivity({
+        void logActivity({
             action: LogAction.ASSIGN_SUBSCRIPTION,
             category: LogCategory.SUBSCRIPTION,
             performedBy: {

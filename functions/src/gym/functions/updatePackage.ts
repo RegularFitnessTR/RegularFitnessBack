@@ -73,7 +73,7 @@ export const updatePackage = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_PACKAGE,
             category: LogCategory.GYM,
             performedBy: {

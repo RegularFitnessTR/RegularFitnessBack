@@ -77,7 +77,7 @@ export const toggleScheduleStatus = onCall(async (request) => {
             updatedAt: admin.firestore.Timestamp.now()
         });
 
-        await logActivity({
+        void logActivity({
             action: LogAction.TOGGLE_SCHEDULE_STATUS,
             category: LogCategory.SCHEDULE,
             performedBy: {

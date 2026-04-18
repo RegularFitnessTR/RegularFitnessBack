@@ -58,7 +58,7 @@ export const createAdmin = onCall(async (request) => {
         await db.collection(COLLECTIONS.ADMINS).doc(userRecord.uid).set(newAdmin);
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_ADMIN,
             category: LogCategory.ADMIN,
             performedBy: {

@@ -157,7 +157,7 @@ export const deleteCoachAccount = onCall(async (request) => {
         await auth.deleteUser(uid);
 
         // ── AŞAMA 8: AKTİVİTE LOGU ──────────────────────────────────────────
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_COACH_ACCOUNT,
             category: LogCategory.COACH,
             performedBy: {

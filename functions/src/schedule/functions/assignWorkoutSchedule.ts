@@ -126,7 +126,7 @@ export const assignWorkoutSchedule = onCall(async (request) => {
 
         await scheduleRef.set(newSchedule);
 
-        await logActivity({
+        void logActivity({
             action: LogAction.ASSIGN_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {

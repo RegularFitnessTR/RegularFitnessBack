@@ -138,7 +138,7 @@ export const updateAdmin = onCall(async (request) => {
         }
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_ADMIN,
             category: LogCategory.ADMIN,
             performedBy: {

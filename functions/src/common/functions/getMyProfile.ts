@@ -4,6 +4,8 @@ import { onCall, HttpsError } from "../utils/onCall";
 import { serializeTimestamps } from "../utils/serialize";
 import { logError } from "../../log/utils/logError";
 
+const HOT_READ_OPTIONS = { minInstances: 1 } as const;
+
 const ROLE_TO_COLLECTION: Record<string, string> = {
     admin: COLLECTIONS.ADMINS,
     coach: COLLECTIONS.COACHES,
@@ -45,7 +47,7 @@ async function resolveProfileFallback(uid: string) {
     return null;
 }
 
-export const getMyProfile = onCall(async (request) => {
+export const getMyProfile = onCall(HOT_READ_OPTIONS, async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
     }

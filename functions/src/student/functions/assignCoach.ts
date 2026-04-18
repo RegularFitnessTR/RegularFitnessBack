@@ -85,7 +85,7 @@ export const assignCoach = onCall(async (request) => {
         await batch.commit();
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.ASSIGN_COACH,
             category: LogCategory.STUDENT,
             performedBy: {

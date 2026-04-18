@@ -83,7 +83,7 @@ export const createGym = onCall(async (request) => {
         const updatedGymIds: string[] = updatedAdminDoc.data()?.gymIds || [];
         await syncGymClaims(request.auth.uid, { gymIds: updatedGymIds });
 
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_GYM,
             category: LogCategory.GYM,
             performedBy: {

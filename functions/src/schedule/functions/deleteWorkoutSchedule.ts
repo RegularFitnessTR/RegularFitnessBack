@@ -57,7 +57,7 @@ export const deleteWorkoutSchedule = onCall(async (request) => {
 
         await db.collection(COLLECTIONS.WORKOUT_SCHEDULES).doc(scheduleId).delete();
 
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {

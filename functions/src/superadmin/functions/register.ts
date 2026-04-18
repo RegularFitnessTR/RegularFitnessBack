@@ -62,7 +62,7 @@ export const registerSuperAdmin = onCall(async (request) => {
         await db.collection(COLLECTIONS.SUPERADMINS).doc(userRecord.uid).set(newSuperAdmin);
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.REGISTER_SUPERADMIN,
             category: LogCategory.SUPERADMIN,
             performedBy: {

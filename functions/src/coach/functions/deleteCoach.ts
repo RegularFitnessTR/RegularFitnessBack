@@ -49,7 +49,7 @@ export const deleteCoach = onCall(async (request) => {
         await db.collection(COLLECTIONS.COACHES).doc(coachUid).delete();
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_COACH,
             category: LogCategory.COACH,
             performedBy: {

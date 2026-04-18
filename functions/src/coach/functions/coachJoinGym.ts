@@ -62,7 +62,7 @@ export const coachJoinGym = onCall(async (request) => {
         // Custom claims'e gymId ekle
         await syncGymClaims(coachUid, { gymId: gymDoc.id });
 
-        await logActivity({
+        void logActivity({
             action: LogAction.COACH_JOIN_GYM,
             category: LogCategory.COACH,
             performedBy: {

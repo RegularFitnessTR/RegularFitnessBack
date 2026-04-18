@@ -85,7 +85,7 @@ export const updateMembershipPlan = onCall(async (request) => {
             });
         });
 
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_MEMBERSHIP,
             category: LogCategory.GYM,
             performedBy: { uid: request.auth!.uid, role: role as UserRole, name: request.auth!.token.name || role },

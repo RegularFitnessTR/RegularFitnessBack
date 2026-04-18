@@ -91,7 +91,7 @@ export const useSession = onCall(async (request) => {
 
         await batch.commit();
 
-        await logActivity({
+        void logActivity({
             action: LogAction.USE_SESSION,
             category: LogCategory.SUBSCRIPTION,
             performedBy: {

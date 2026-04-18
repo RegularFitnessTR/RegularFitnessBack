@@ -43,7 +43,7 @@ export const deleteSocialMediaTypes = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_SOCIAL_MEDIA_TYPES,
             category: LogCategory.APPLICATION_FEATURES,
             performedBy: {

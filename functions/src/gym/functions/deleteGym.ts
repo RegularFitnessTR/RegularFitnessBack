@@ -101,7 +101,7 @@ export const deleteGym = onCall(async (request) => {
         await Promise.all(coachClaimsUpdates);
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_GYM,
             category: LogCategory.GYM,
             performedBy: {

@@ -94,7 +94,7 @@ export const gymCheckIn = onCall(async (request) => {
         batch.update(userRef, { isInGym: true });
         await batch.commit();
 
-        await logActivity({
+        void logActivity({
             action: LogAction.GYM_CHECK_IN,
             category: LogCategory.GYM_PRESENCE,
             performedBy: {

@@ -275,7 +275,7 @@ export const deleteStudentAccount = onCall(async (request) => {
         await auth.deleteUser(uid);
 
         // ── AŞAMA 7: AKTİVİTE LOGU ──────────────────────────────────────────
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_STUDENT,
             category: LogCategory.STUDENT,
             performedBy: {

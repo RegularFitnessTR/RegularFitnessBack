@@ -107,7 +107,7 @@ export const updateCoach = onCall(async (request) => {
         }
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_COACH,
             category: LogCategory.COACH,
             performedBy: {

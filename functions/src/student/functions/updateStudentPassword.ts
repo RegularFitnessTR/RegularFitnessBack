@@ -36,7 +36,7 @@ export const updateStudentPassword = onCall(async (request) => {
         await auth.updateUser(studentUid, { password: data.newPassword });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_STUDENT_PASSWORD,
             category: LogCategory.STUDENT,
             performedBy: {

@@ -195,7 +195,7 @@ export const createAppointments = onCall(async (request) => {
             }
         });
 
-        await logActivity({
+        void logActivity({
             action: LogAction.ASSIGN_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {

@@ -48,7 +48,7 @@ export const deleteAdmin = onCall(async (request) => {
         await db.collection(COLLECTIONS.ADMINS).doc(adminUid).delete();
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_ADMIN,
             category: LogCategory.ADMIN,
             performedBy: {

@@ -216,7 +216,7 @@ export const deleteAdminAccount = onCall(async (request) => {
         await auth.deleteUser(uid);
 
         // ── AŞAMA 5: AKTİVİTE LOGU ───────────────────────────────────────────
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_ADMIN_ACCOUNT,
             category: LogCategory.ADMIN,
             performedBy: {

@@ -88,7 +88,7 @@ export const registerCoach = onCall(async (request) => {
 
         await db.collection(COLLECTIONS.COACHES).doc(userRecord.uid).set(newCoach);
 
-        await logActivity({
+        void logActivity({
             action: LogAction.REGISTER_COACH,
             category: LogCategory.COACH,
             performedBy: {

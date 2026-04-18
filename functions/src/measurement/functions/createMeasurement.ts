@@ -88,7 +88,7 @@ export const createMeasurement = onCall(async (request) => {
         // Log kaydı
 
 
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_MEASUREMENT,
             category: LogCategory.MEASUREMENT,
             performedBy: {

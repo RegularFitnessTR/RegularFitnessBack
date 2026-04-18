@@ -42,7 +42,7 @@ export const addAmenity = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.ADD_AMENITY,
             category: LogCategory.GYM,
             performedBy: {

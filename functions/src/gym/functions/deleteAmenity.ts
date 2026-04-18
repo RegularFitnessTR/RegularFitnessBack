@@ -42,7 +42,7 @@ export const deleteAmenity = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_AMENITY,
             category: LogCategory.GYM,
             performedBy: {

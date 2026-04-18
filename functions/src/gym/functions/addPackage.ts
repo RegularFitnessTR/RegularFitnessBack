@@ -66,7 +66,7 @@ export const addPackage = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.ADD_PACKAGE,
             category: LogCategory.GYM,
             performedBy: {

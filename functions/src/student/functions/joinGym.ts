@@ -68,7 +68,7 @@ export const joinGym = onCall(async (request) => {
         }
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.JOIN_GYM,
             category: LogCategory.STUDENT,
             performedBy: {

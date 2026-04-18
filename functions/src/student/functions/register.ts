@@ -104,7 +104,7 @@ export const registerStudent = onCall(async (request) => {
 
         // Öğrenci ancak bir gym'e bağlı ise loglanır.
         if (resolvedGymId) {
-            await logActivity({
+            void logActivity({
                 action: LogAction.JOIN_GYM,
                 category: LogCategory.STUDENT,
                 performedBy: {

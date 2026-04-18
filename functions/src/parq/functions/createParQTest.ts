@@ -70,7 +70,7 @@ export const createParQTest = onCall(async (request) => {
         // Log kaydı
         const coachGymId: string = request.auth!.token.gymId || '';
 
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_PARQ_TEST,
             category: LogCategory.PARQ,
             performedBy: {

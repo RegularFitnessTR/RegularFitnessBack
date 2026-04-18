@@ -198,7 +198,7 @@ export const updateAppointmentsPlan = onCall(async (request) => {
 
         await batch.commit();
 
-        await logActivity({
+        void logActivity({
             action: LogAction.UPDATE_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {

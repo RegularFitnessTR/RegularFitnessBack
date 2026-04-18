@@ -39,7 +39,7 @@ export const createSocialMediaTypes = onCall(async (request) => {
         }, { merge: true });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.CREATE_SOCIAL_MEDIA_TYPES,
             category: LogCategory.APPLICATION_FEATURES,
             performedBy: {

@@ -80,7 +80,7 @@ export const rejectPayment = onCall(async (request) => {
         });
 
         // Log kaydı
-        await logActivity({
+        void logActivity({
             action: LogAction.REJECT_PAYMENT,
             category: LogCategory.PAYMENT,
             performedBy: {

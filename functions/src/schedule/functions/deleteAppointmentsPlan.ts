@@ -104,7 +104,7 @@ export const deleteAppointmentsPlan = onCall(async (request) => {
 
         await batch.commit();
 
-        await logActivity({
+        void logActivity({
             action: LogAction.DELETE_WORKOUT_SCHEDULE,
             category: LogCategory.SCHEDULE,
             performedBy: {
