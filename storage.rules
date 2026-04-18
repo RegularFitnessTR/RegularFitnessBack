@@ -1,10 +1,32 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwnProfileImage(fileName) {
+      return fileName == request.auth.uid
+        || fileName == request.auth.uid + '.jpg'
+        || fileName == request.auth.uid + '.jpeg'
+        || fileName == request.auth.uid + '.png'
+        || fileName == request.auth.uid + '.webp';
+    }
+
+    function isValidImageUpload() {
+      return request.resource != null
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /profile_images/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated()
+        && isOwnProfileImage(fileName)
+        && (request.resource == null || isValidImageUpload());
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
