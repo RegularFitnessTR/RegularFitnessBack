@@ -2,6 +2,10 @@ import { db, COLLECTIONS, onCall, HttpsError, serializeTimestamps } from "../../
 import { PaymentMethodType } from "../../gym/types/gym.enums";
 import { logError } from "../../log/utils/logError";
 
+const normalizePhotoUrl = (value: unknown): string => {
+    return typeof value === 'string' ? value.trim() : '';
+};
+
 export const getStudentSchedule = onCall(async (request) => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Bu işlem için giriş yapmalısınız.');
@@ -51,6 +55,7 @@ export const getStudentSchedule = onCall(async (request) => {
                 return {
                     success: true,
                     scheduleType: 'fixed_dates',
+                    coachPhotoUrl: '',
                     appointments: [],
                     message: 'Aktif paket aboneliği yok.'
                 };
@@ -64,17 +69,25 @@ export const getStudentSchedule = onCall(async (request) => {
                 .orderBy('sessionNumber', 'asc')
                 .get();
 
-            const appointments = appointmentsQuery.docs.map((doc) => {
-                const data = doc.data() as Record<string, any>;
+            const appointmentRows = appointmentsQuery.docs.map((doc) => doc.data() as Record<string, any>);
+
+            const appointments = appointmentRows.map((data) => {
                 const coachName =
                     typeof data.coachName === 'string' && data.coachName.trim().length > 0
                         ? data.coachName
                         : '';
+                const appointmentCoachPhotoUrl =
+                    normalizePhotoUrl(data.coachPhotoUrl);
+
                 return serializeTimestamps({
                     ...data,
-                    coachName
+                    coachName,
+                    coachPhotoUrl: appointmentCoachPhotoUrl
                 });
             });
+            const coachPhotoUrl = appointments.find((item) =>
+                typeof item?.coachPhotoUrl === 'string' && item.coachPhotoUrl.length > 0
+            )?.coachPhotoUrl || '';
 
             // Özet bilgileri Firestore aggregation ile hesapla
             const [pendingCount, completedCount, cancelledCount] = await Promise.all([
@@ -86,6 +99,7 @@ export const getStudentSchedule = onCall(async (request) => {
             return {
                 success: true,
                 scheduleType: 'fixed_dates',
+                coachPhotoUrl,
                 appointments,
                 summary: {
                     total: appointmentsQuery.size,
@@ -107,12 +121,14 @@ export const getStudentSchedule = onCall(async (request) => {
                 return {
                     success: true,
                     scheduleType: 'weekly_recurring',
+                    coachPhotoUrl: '',
                     schedule: null,
                     message: 'Aktif haftalık program yok.'
                 };
             }
 
             const scheduleRaw = scheduleQuery.docs[0].data() as Record<string, any>;
+            const coachPhotoUrl = normalizePhotoUrl(scheduleRaw.coachPhotoUrl);
             const coachName =
                 typeof scheduleRaw.coachName === 'string' && scheduleRaw.coachName.trim().length > 0
                     ? scheduleRaw.coachName
@@ -121,9 +137,11 @@ export const getStudentSchedule = onCall(async (request) => {
             return {
                 success: true,
                 scheduleType: 'weekly_recurring',
+                coachPhotoUrl,
                 schedule: serializeTimestamps({
                     ...scheduleRaw,
-                    coachName
+                    coachName,
+                    coachPhotoUrl
                 })
             };
         }

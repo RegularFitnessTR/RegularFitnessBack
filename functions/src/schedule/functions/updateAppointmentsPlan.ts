@@ -104,11 +104,13 @@ export const updateAppointmentsPlan = onCall(async (request) => {
         }
 
         let coachName = '';
+        let coachPhotoUrl = '';
         if (sub.coachId) {
             const coachDoc = await db.collection(COLLECTIONS.COACHES).doc(sub.coachId).get();
             if (coachDoc.exists) {
                 const coachData = coachDoc.data()!;
                 coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                coachPhotoUrl = typeof coachData.photoUrl === 'string' ? coachData.photoUrl.trim() : '';
             }
         }
 
@@ -186,6 +188,7 @@ export const updateAppointmentsPlan = onCall(async (request) => {
                 studentName,
                 coachId: sub.coachId,
                 coachName: coachName || undefined,
+                coachPhotoUrl: coachPhotoUrl || undefined,
                 gymId: sub.gymId,
                 subscriptionId: data.subscriptionId,
                 sessionNumber: availableSessionNumbers[index],

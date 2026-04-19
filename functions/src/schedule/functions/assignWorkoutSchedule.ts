@@ -46,6 +46,7 @@ export const assignWorkoutSchedule = onCall(async (request) => {
         const gymId: string = studentData.gymId;
         const studentName = `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim();
         let coachName = '';
+        let coachPhotoUrl = '';
 
         if (!gymId) {
             throw new HttpsError('failed-precondition', 'Öğrenci bir salona atanmamış.');
@@ -73,6 +74,7 @@ export const assignWorkoutSchedule = onCall(async (request) => {
             if (coachDoc.exists) {
                 const coachData = coachDoc.data()!;
                 coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                coachPhotoUrl = typeof coachData.photoUrl === 'string' ? coachData.photoUrl.trim() : '';
             }
         }
 
@@ -113,6 +115,7 @@ export const assignWorkoutSchedule = onCall(async (request) => {
             studentName,
             coachId: studentData.coachId || undefined,
             coachName: coachName || undefined,
+            coachPhotoUrl: coachPhotoUrl || undefined,
             gymId,
             programName: data.programName.trim(),
             programType: data.programType,

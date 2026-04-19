@@ -15,6 +15,7 @@ export interface WorkoutSchedule {
     studentName?: string; // denormalized display field
     coachId?: string;    // klasik salonda zorunlu değil, öğrenci de oluşturabilir
     coachName?: string;  // denormalized display field
+    coachPhotoUrl?: string; // denormalized display field
     gymId: string;
 
     programName: string;
@@ -39,6 +40,7 @@ export interface Appointment {
     studentName?: string; // denormalized display field
     coachId: string;
     coachName?: string;   // denormalized display field
+    coachPhotoUrl?: string; // denormalized display field
     gymId: string;
     subscriptionId: string;  // hangi pakete bağlı
 

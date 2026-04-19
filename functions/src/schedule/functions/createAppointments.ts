@@ -80,6 +80,7 @@ export const createAppointments = onCall(async (request) => {
         const studentData = studentDoc.data()!;
         const studentName = `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim();
         let coachName = '';
+        let coachPhotoUrl = '';
 
         // 2. Yetki kontrolü
         if (role === 'coach' && studentData.coachId !== request.auth.uid) {
@@ -91,6 +92,7 @@ export const createAppointments = onCall(async (request) => {
             if (coachDoc.exists) {
                 const coachData = coachDoc.data()!;
                 coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                coachPhotoUrl = typeof coachData.photoUrl === 'string' ? coachData.photoUrl.trim() : '';
             }
         }
 
@@ -126,6 +128,7 @@ export const createAppointments = onCall(async (request) => {
                 if (coachDoc.exists) {
                     const coachData = coachDoc.data()!;
                     coachName = `${coachData.firstName || ''} ${coachData.lastName || ''}`.trim();
+                    coachPhotoUrl = typeof coachData.photoUrl === 'string' ? coachData.photoUrl.trim() : '';
                 }
             }
 
@@ -159,6 +162,7 @@ export const createAppointments = onCall(async (request) => {
                     studentName,
                     coachId: sub.coachId,
                     coachName: coachName || undefined,
+                    coachPhotoUrl: coachPhotoUrl || undefined,
                     gymId,
                     subscriptionId: data.subscriptionId,
                     sessionNumber: existingCount + index + 1,
