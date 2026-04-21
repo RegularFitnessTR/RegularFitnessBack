@@ -1,7 +1,7 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 
 // Clean module imports using barrel exports
-import { getMyProfile } from "./common";
+import { getMyProfile, ping } from "./common";
 import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount, getStudentById, getGymMembers, getCoachMembers } from "./student";
 import { registerCoach, coachJoinGym, updateCoachProfile, deleteCoachAccount, removeCoachFromGym, getCoachById, getGymCoaches } from "./coach";
 import { registerAdmin, createAdmin, updateAdmin, deleteAdmin, deleteAdminAccount } from "./admin";
@@ -25,6 +25,7 @@ setGlobalOptions({ maxInstances: 10, enforceAppCheck: true });
 export {
     // Common
     getMyProfile,
+    ping,
     // Student
     registerStudent,
     assignCoach,

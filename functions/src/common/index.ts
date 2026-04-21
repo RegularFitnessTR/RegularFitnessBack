@@ -14,3 +14,4 @@ export * from './utils/serialize';
 
 // Functions
 export * from './functions/getMyProfile';
+export * from './functions/ping';
