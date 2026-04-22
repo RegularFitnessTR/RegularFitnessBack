@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { syncGymClaims } from "../../common/utils/syncGymClaims";
 import { Gym } from "../types/gym.model";
 import { CreateGymData } from "../types/gym.dto";
 import { logActivity } from "../../log/utils/logActivity";

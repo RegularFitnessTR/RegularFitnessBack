@@ -1,4 +1,5 @@
-import { db, auth, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
+import { db, auth, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { syncGymClaims } from "../../common/utils/syncGymClaims";
 import { UpdateCoachData } from "../types/coach.dto";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";

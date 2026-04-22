@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
-import { db, auth, COLLECTIONS, generateQRCode, onCall, HttpsError } from "../../common";
+import { db, auth, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { generateQRCode } from "../../common/utils/qrcode";
 import { CoachUser } from "../types/coach.model";
 import { RegisterCoachData } from "../types/coach.dto";
 import { logActivity } from "../../log/utils/logActivity";

@@ -1,13 +1,17 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 
-// Clean module imports using barrel exports
-import { getMyProfile, ping } from "./common";
-import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount, getStudentById, getGymMembers, getCoachMembers } from "./student";
-import { registerCoach, coachJoinGym, updateCoachProfile, deleteCoachAccount, removeCoachFromGym, getCoachById, getGymCoaches } from "./coach";
+// Clean module imports using barrel exports.
+// NOT: iOS hot path fonksiyonları (ping, getMyNotifications, markNotificationAsRead,
+// getStudentBalance, getStudentSubscription, gymCheckIn, gymCheckOut, getGymPresence,
+// getStudentById, getCoachById, getGymDetails) ayrı bir codebase'e (functions-hot)
+// taşındı — cold start süresini azaltmak için. Bkz: ../../functions-hot/src/index.ts
+import { getMyProfile } from "./common/functions/getMyProfile";
+import { registerStudent, assignCoach, joinGym, updateStudentProfile, deleteStudentAccount, getGymMembers, getCoachMembers } from "./student";
+import { registerCoach, coachJoinGym, updateCoachProfile, deleteCoachAccount, removeCoachFromGym, getGymCoaches } from "./coach";
 import { registerAdmin, createAdmin, updateAdmin, deleteAdmin, deleteAdminAccount } from "./admin";
 import { registerSuperAdmin } from "./superadmin";
-import { createGym, updateGym, deleteGym, getGymDetails, getOwnerGyms, addPackage, updatePackage, deletePackage, updateMembershipPlan, addMembershipPlan, deleteMembershipPlan, addAmenity, deleteAmenity } from "./gym";
-import { assignSubscription, getStudentSubscription, useSession, getStudentBalance, cancelSubscription } from "./subscription";
+import { createGym, updateGym, deleteGym, getOwnerGyms, addPackage, updatePackage, deletePackage, updateMembershipPlan, addMembershipPlan, deleteMembershipPlan, addAmenity, deleteAmenity } from "./gym";
+import { assignSubscription, useSession, cancelSubscription } from "./subscription";
 import { createPaymentRequest, approvePayment, rejectPayment, getPaymentRequests } from "./payment";
 import { createMeasurement, getMeasurements, getLatestMeasurement } from "./measurement";
 import { createParQTest, getParQTests, getLatestParQTest } from "./parq";
@@ -15,8 +19,7 @@ import { assignWorkoutSchedule, updateWorkoutSchedule, deleteWorkoutSchedule, ge
 import { createGymTypes, createAmenities, createSocialMediaTypes, deleteAmenities, deleteGymTypes, deleteSocialMediaTypes, getApplicationFeatures } from "./applicationFeatures";
 import { getSuperAdminLogs, getAdminLogs, getSuperAdminErrorLogs } from "./log";
 import { resetPassword } from "./auth";
-import { sendSessionReminder, getMyNotifications, markNotificationAsRead } from "./notification";
-import { gymCheckIn, gymCheckOut, getGymPresence } from "./gymPresence";
+import { sendSessionReminder } from "./notification";
 
 // Global ayarlar
 setGlobalOptions({ maxInstances: 10, enforceAppCheck: true });
@@ -25,14 +28,12 @@ setGlobalOptions({ maxInstances: 10, enforceAppCheck: true });
 export {
     // Common
     getMyProfile,
-    ping,
     // Student
     registerStudent,
     assignCoach,
     joinGym,
     updateStudentProfile,
     deleteStudentAccount,
-    getStudentById,
     getGymMembers,
     getCoachMembers,
     // Coach
@@ -41,7 +42,6 @@ export {
     updateCoachProfile,
     deleteCoachAccount,
     removeCoachFromGym,
-    getCoachById,
     getGymCoaches,
     // Admin
     registerAdmin,
@@ -55,7 +55,6 @@ export {
     createGym,
     updateGym,
     deleteGym,
-    getGymDetails,
     getOwnerGyms,
     addPackage,
     updatePackage,
@@ -67,9 +66,7 @@ export {
     deleteAmenity,
     // Subscription
     assignSubscription,
-    getStudentSubscription,
     useSession,
-    getStudentBalance,
     cancelSubscription,
     // Payment
     createPaymentRequest,
@@ -116,12 +113,6 @@ export {
     getSuperAdminErrorLogs,
     // Auth
     resetPassword,
-    // Notification
+    // Notification (only scheduled)
     sendSessionReminder,
-    getMyNotifications,
-    markNotificationAsRead,
-    // Gym Presence
-    gymCheckIn,
-    gymCheckOut,
-    getGymPresence,
 };

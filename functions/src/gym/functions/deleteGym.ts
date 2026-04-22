@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
-import { db, COLLECTIONS, syncGymClaims, onCall, HttpsError } from "../../common";
+import { db, COLLECTIONS, onCall, HttpsError } from "../../common";
+import { syncGymClaims } from "../../common/utils/syncGymClaims";
 import { logActivity } from "../../log/utils/logActivity";
 import { logError } from "../../log/utils/logError";
 import { LogAction, LogCategory } from "../../log/types/log.enums";

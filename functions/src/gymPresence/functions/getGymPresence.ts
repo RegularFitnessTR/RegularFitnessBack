@@ -16,7 +16,7 @@ export const getGymPresence = onCall(async (request) => {
     }
 
     const { role } = request.auth.token;
-    const data = (request.data ?? {}) as GetGymPresenceData;
+    const data = (request.data ?? {}) as GetGymPresenceData & { userId?: string };
     const gymId = typeof data.gymId === 'string' ? data.gymId.trim() : '';
 
     if (!gymId) {
@@ -57,6 +57,10 @@ export const getGymPresence = onCall(async (request) => {
 
         let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.GYM_PRESENCE)
             .where('gymId', '==', gymId);
+
+        if (data.userId) {
+            query = query.where('userId', '==', data.userId);
+        }
 
         if (data.userRole) {
             query = query.where('userRole', '==', data.userRole);
